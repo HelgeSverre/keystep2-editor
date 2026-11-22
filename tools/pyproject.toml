@@ -1,0 +1,12 @@
+[project]
+name = "keystep2-tools"
+version = "0.2.0"
+description = "Read-only command-line decoder for Arturia KeyStep mk2 project files"
+requires-python = ">=3.10"
+dependencies = []
+
+[dependency-groups]
+dev = ["ruff"]
+
+[tool.ruff]
+line-length = 120

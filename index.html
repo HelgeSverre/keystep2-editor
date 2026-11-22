@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KeyStep mk2 pattern editor</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #e4e7eb;
+    --panel: #eef0f3;
+    --surface: #f8f9fa;
+    --sunken: #dde1e6;
+    --ink: #161a20;
+    --muted: #5f6772;
+    --line: #c6ccd4;
+    --line-strong: #a3abb6;
+    --note: #2b3bc4;
+    --accent: #d9481f;
+    --select: #2b3bc4;
+    --on-select: #ffffff;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17191d;
+      --panel: #1f2226;
+      --surface: #272b31;
+      --sunken: #1a1c20;
+      --ink: #e6e8eb;
+      --muted: #969da8;
+      --line: #34393f;
+      --line-strong: #525963;
+      --note: #93a0ff;
+      --accent: #ff7d4f;
+      --select: #4a59d6;
+      --on-select: #ffffff;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; overflow: hidden;
+    font: 12.5px/1.35 var(--font);
+    font-variant-numeric: tabular-nums;
+    background: var(--bg); color: var(--ink);
+    user-select: none; -webkit-user-select: none; cursor: default;
+  }
+  #shell { height: 100vh; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+
+  button, input, select { font: inherit; color: inherit; }
+  button {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 5px;
+    padding: 3px 10px; height: 26px; white-space: nowrap;
+  }
+  button:hover:not(:disabled) { border-color: var(--line-strong); }
+  button:active:not(:disabled) { background: var(--sunken); }
+  button:disabled { opacity: 0.4; }
+  button[aria-pressed="true"] { background: var(--select); color: var(--on-select); border-color: var(--select); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  input, select {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 4px;
+    height: 24px; padding: 1px 6px; user-select: text; -webkit-user-select: text;
+  }
+
+  /* Toolbar */
+  .toolbar {
+    display: flex; align-items: center; gap: 6px; padding: 6px 10px;
+    background: var(--panel); border-bottom: 1px solid var(--line);
+  }
+  .toolbar .sep { width: 1px; height: 18px; background: var(--line); margin: 0 4px; }
+  .toolbar .doc { margin-left: auto; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .toolbar .doc b { color: var(--ink); font-weight: 600; }
+  .toolbar .doc .dirty { color: var(--accent); }
+  #playBtn { min-width: 64px; font-weight: 600; }
+
+  /* Workspace */
+  #work { display: grid; grid-template-columns: 208px minmax(0, 1fr) 272px; min-height: 0; }
+  .pane { background: var(--panel); min-height: 0; display: flex; flex-direction: column; }
+  .pane h2 {
+    font-size: 11.5px; font-weight: 600; color: var(--muted); margin: 0;
+    padding: 8px 10px 6px;
+  }
+
+  /* Patterns pane */
+  #patterns { border-right: 1px solid var(--line); }
+  .banks { display: grid; grid-template-columns: repeat(4, 1fr); padding: 0 10px 8px; }
+  .banks button { border-radius: 0; margin-left: -1px; padding: 0; }
+  .banks button:first-child { border-radius: 5px 0 0 5px; margin-left: 0; }
+  .banks button:last-child { border-radius: 0 5px 5px 0; }
+  .banks button[aria-pressed="true"] { position: relative; }
+  #slots { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-auto-rows: minmax(26px, 1fr); border-top: 1px solid var(--line); }
+  .slot {
+    display: grid; grid-template-columns: 22px minmax(0, 1fr) 22px; gap: 6px; align-items: center;
+    height: auto; min-height: 0; padding: 2px 10px; border: 0; border-radius: 0; background: transparent; text-align: left;
+    border-bottom: 1px solid var(--line);
+  }
+  .slot:hover:not([aria-pressed="true"]) { background: var(--surface); }
+  .slot svg { width: 100%; height: 100%; max-height: 30px; min-height: 14px; display: block; }
+  .slot svg rect { fill: var(--note); }
+  .slot .num { font-weight: 600; text-align: right; }
+  .slot .len { color: var(--muted); font-size: 11px; text-align: right; }
+  .slot.empty .num { color: var(--muted); font-weight: 400; }
+  .slot[aria-pressed="true"] svg rect { fill: var(--on-select); }
+  .slot[aria-pressed="true"] .len { color: var(--on-select); opacity: 0.8; }
+  .slot-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; padding: 8px 10px; border-top: 1px solid var(--line); }
+  .slot-actions button { padding: 0; }
+
+  /* Roll */
+  #stage { position: relative; min-width: 0; min-height: 0; overflow-x: auto; overflow-y: hidden; background: var(--surface); }
+  canvas#roll { display: block; width: 100%; min-width: 760px; height: 100%; touch-action: none; cursor: crosshair; outline: none; }
+  #drop {
+    position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px;
+    color: var(--muted); font-size: 14px; background: var(--surface);
+  }
+  body.dragover #stage { box-shadow: inset 0 0 0 2px var(--accent); }
+
+  /* Inspector */
+  #inspector { border-left: 1px solid var(--line); overflow-y: auto; }
+  .group { border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+  .rows { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 4px 8px; align-items: center; padding: 0 10px; }
+  .rows label { color: var(--muted); }
+  .rows input, .rows select { width: 100%; }
+  .rows .with-unit { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 6px; align-items: center; }
+  .rows .unit { color: var(--muted); font-size: 11.5px; white-space: nowrap; }
+  .empty-note { color: var(--muted); padding: 0 10px 2px; }
+  .group .wide { margin: 8px 10px 0; width: calc(100% - 20px); }
+
+  details#raw summary { font-size: 11.5px; font-weight: 600; color: var(--muted); padding: 8px 10px; }
+  #rawBody { padding: 0 10px 12px; user-select: text; -webkit-user-select: text; }
+  #rawBody h3 { font-size: 11.5px; font-weight: 600; margin: 10px 0 4px; }
+  #rawBody h3:first-child { margin-top: 0; }
+  #rawBody dl { margin: 0; }
+  #rawBody dt { color: var(--muted); font-size: 11.5px; margin-top: 4px; }
+  #rawBody dd { margin: 0; }
+  #rawBody table { border-collapse: collapse; width: 100%; }
+  #rawBody th { text-align: left; font-weight: 400; color: var(--muted); padding: 1px 6px 1px 0; }
+  #rawBody td { padding: 1px 6px 1px 0; }
+  .hex { font-family: var(--mono); font-size: 11px; }
+  .bad { color: var(--accent); font-weight: 600; }
+  #rawBody p { color: var(--muted); font-size: 11.5px; margin: 6px 0 0; }
+
+  /* Status bar */
+  .statusbar {
+    display: flex; gap: 16px; align-items: center; padding: 4px 10px; height: 24px;
+    background: var(--panel); border-top: 1px solid var(--line); color: var(--muted); font-size: 11.5px;
+    white-space: nowrap; overflow: hidden;
+  }
+  .statusbar #status { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+  .statusbar #status.alert { color: var(--accent); }
+</style>
+</head>
+<body>
+<div id="shell">
+  <header class="toolbar">
+    <button id="openBtn" title="Open a .keystep2 project">Open…</button>
+    <button id="saveBtn" disabled title="Save a copy (Cmd/Ctrl+S). The opened file is not overwritten.">Save a copy…</button>
+    <span class="sep"></span>
+    <button id="undoBtn" disabled title="Undo (Cmd/Ctrl+Z)">Undo</button>
+    <button id="redoBtn" disabled title="Redo (Shift+Cmd/Ctrl+Z)">Redo</button>
+    <span class="sep"></span>
+    <button id="playBtn" aria-pressed="false" disabled title="Play or stop (Space)">Play</button>
+    <button id="soundBtn" aria-pressed="true" title="Play notes as you add or move them">Audition</button>
+    <span class="doc" id="fileLabel"></span>
+    <input type="file" id="fileInput" accept=".keystep2" hidden>
+  </header>
+
+  <div id="work">
+    <aside class="pane" id="patterns" aria-label="Patterns">
+      <h2>Bank</h2>
+      <div class="banks" id="banks"></div>
+      <div id="slots"></div>
+      <div class="slot-actions">
+        <button id="copyBtn" disabled title="Copy this pattern">Copy</button>
+        <button id="pasteBtn" disabled title="Paste over this slot">Paste</button>
+        <button id="clearBtn" disabled title="Remove all notes from this pattern">Clear</button>
+      </div>
+    </aside>
+
+    <main id="stage">
+      <canvas id="roll" tabindex="0" aria-label="Piano roll"></canvas>
+      <div id="drop">
+        <span id="dropText">Drop a .keystep2 project here</span>
+        <button id="chooseBtn">Open…</button>
+      </div>
+    </main>
+
+    <aside class="pane" id="inspector" aria-label="Inspector">
+      <section class="group"><h2>Pattern</h2><div class="rows" id="settings"></div></section>
+      <section class="group"><h2>Note</h2><div id="noteBox"></div></section>
+      <details id="raw"><summary>Raw bytes</summary><div id="rawBody"></div></details>
+    </aside>
+  </div>
+
+  <footer class="statusbar">
+    <span id="status" role="status" aria-live="polite"></span>
+    <span id="where"></span>
+    <span id="checksum"></span>
+  </footer>
+</div>
+
+<script src="keystep2.js"></script>
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// ---- state -----------------------------------------------------------------
+let file = null, fileName = '', dirty = false;
+let bank = 1, number = 1, P = null, steps = [];
+let sel = null;            // { step, note }
+let topPitch = 84;         // highest visible pitch
+let undoStack = [], redoStack = [], clipboard = null;
+let lastVel = 100, lastLen = 2;
+let soundOn = true;
+
+// ---- geometry: the roll fills the stage -------------------------------------
+const KEYW = 44, RULER = 20, ROWH = 14, VGAP = 8, VELH = 76;
+const canvas = $('roll'), ctx = canvas.getContext('2d');
+const colW = () => (canvas.clientWidth - KEYW) / 64;
+const rows = () => clamp(Math.floor((canvas.clientHeight - RULER - VGAP - VELH) / ROWH), 4, 128);
+const gridBottom = () => RULER + rows() * ROWH;
+const velTop = () => canvas.clientHeight - VELH;
+const clampTop = (p) => clamp(p, rows() - 1, 127);
+const BLACK = [0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0];
+
+// ---- file ------------------------------------------------------------------
+async function openFile(f) {
+  try {
+    loadBytes(new Uint8Array(await f.arrayBuffer()), f.name);
+  } catch (e) {
+    if (file) say(e.message, true); else $('dropText').textContent = e.message;
+  }
+}
+
+function loadBytes(bytes, name) {
+  const parsed = KS2.parse(bytes);
+  stop();
+  file = parsed; fileName = name; dirty = false;
+  undoStack = []; redoStack = []; clipboard = null;
+  $('drop').hidden = true;
+  const first = [...file.patterns.values()].filter((p) => !KS2.isEmpty(p.blob))
+    .sort((a, b) => a.bank - b.bank || a.number - b.number)[0];
+  selectPattern(first ? first.bank : 1, first ? first.number : 1);
+}
+
+async function saveCopy() {
+  if (!file) return;
+  const out = KS2.serialize(file);
+  const name = fileName.replace(/\.keystep2$/i, '').replace(/-edited$/, '') + '-edited.keystep2';
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await showSaveFilePicker({
+        suggestedName: name,
+        types: [{ description: 'KeyStep mk2 project', accept: { 'application/octet-stream': ['.keystep2'] } }],
+      });
+      const w = await handle.createWritable();
+      await w.write(out); await w.close();
+      dirty = false; renderChrome(); say(`Saved ${handle.name}`);
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+    }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([out], { type: 'application/octet-stream' }));
+  a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  dirty = false; renderChrome(); say(`Saved ${name} to Downloads`);
+}
+
+// ---- pattern selection and edits -------------------------------------------
+const getPattern = (b, n) => file.patterns.get(KS2.patternKey(b, n));
+const isBlank = (p) => KS2.isEmpty(p.blob);
+
+function loadSteps() {
+  steps = isBlank(P) ? Array.from({ length: 64 }, () => []) : KS2.readSteps(P.blob);
+}
+
+function selectPattern(b, n, keepView) {
+  bank = b; number = n; P = getPattern(b, n); sel = null;
+  loadSteps();
+  if (!keepView) fitView();
+  renderAll();
+}
+
+function fitView() {
+  const pitches = steps.flat().map((o) => o.n);
+  const mid = pitches.length ? (Math.min(...pitches) + Math.max(...pitches)) / 2 : 60;
+  topPitch = clampTop(Math.round(mid + rows() / 2));
+}
+
+function snapshot() {
+  undoStack.push({ bank, number, blob: P.blob.slice(), params: { ...P.params }, bias: P.bias });
+  if (undoStack.length > 300) undoStack.shift();
+  redoStack = []; dirty = true;
+}
+
+function restore(from, to) {
+  const s = from.pop();
+  if (!s) return;
+  const p = getPattern(s.bank, s.number);
+  to.push({ bank: s.bank, number: s.number, blob: p.blob.slice(), params: { ...p.params }, bias: p.bias });
+  p.blob = s.blob; p.params = s.params; p.bias = s.bias;
+  dirty = true;
+  selectPattern(s.bank, s.number, s.bank === bank && s.number === number);
+}
+
+/** Turns an empty slot into a blank pattern the first time something is written to it. */
+function ensureData() {
+  if (isBlank(P)) { P.blob = KS2.initBlob(P.params); P.bias = KS2.CHECKSUM_BIAS; P.checksumOk = true; }
+}
+
+function commit(indices) {
+  ensureData();
+  for (const i of new Set(indices)) KS2.writeStep(P.blob, i, steps[i]);
+  KS2.updateChecksum(P);
+}
+
+function addNote(step, pitch) {
+  if (steps[step].length >= KS2.SLOT_COUNT) { say('A step holds at most 8 notes.', true); return null; }
+  const note = { n: pitch, v: lastVel, l: lastLen, x: 0 };
+  steps[step].push(note);
+  commit([step]);
+  return note;
+}
+
+function moveNote(s, toStep, toPitch) {
+  const { step, note } = s;
+  if (toStep < 0 || toStep > 63 || toPitch < 0 || toPitch > 127) return false;
+  if (toStep === step && toPitch === note.n) return false;
+  const dst = steps[toStep];
+  if (dst.some((o) => o !== note && o.n === toPitch)) return false;
+  if (toStep !== step) {
+    if (dst.length >= KS2.SLOT_COUNT) { say('A step holds at most 8 notes.', true); return false; }
+    steps[step].splice(steps[step].indexOf(note), 1);
+    dst.push(note);
+  }
+  const pitchChanged = note.n !== toPitch;
+  note.n = toPitch; s.step = toStep;
+  commit([step, toStep]);
+  if (pitchChanged) audition(note);
+  return true;
+}
+
+function deleteNote(s) {
+  steps[s.step].splice(steps[s.step].indexOf(s.note), 1);
+  commit([s.step]);
+  if (sel && sel.note === s.note) sel = null;
+}
+
+function setNoteField(field, value) {
+  if (!sel) return;
+  const before = undoStack.length;
+  snapshot();
+  let ok = true;
+  if (field === 'n') ok = moveNote(sel, sel.step, clamp(value, 0, 127));
+  else if (field === 's') ok = moveNote(sel, clamp(value - 1, 0, 63), sel.note.n);
+  else {
+    sel.note[field] = field === 'v' ? clamp(value, 1, 127) : clamp(value, 1, KS2.MAX_NOTE_LENGTH);
+    if (field === 'v') lastVel = sel.note.v; else lastLen = sel.note.l;
+    commit([sel.step]);
+  }
+  if (!ok) undoStack.length = before;
+  renderAll();
+}
+
+function setParam(key, value) {
+  snapshot();
+  KS2.setParam(P, key, value);
+  renderAll();
+}
+
+// ---- rendering: chrome -----------------------------------------------------
+const HINT = 'Click: add note.  Drag: move.  Drag right edge: length.  Double-click: delete.  Wheel: scroll pitch.  Ruler marker: pattern length.';
+let sayTimer = 0;
+function say(text, alert) {
+  $('status').textContent = text || (file ? HINT : '');
+  $('status').classList.toggle('alert', !!alert && !!text);
+  clearTimeout(sayTimer);
+  if (text) sayTimer = setTimeout(() => say(''), 5000);
+}
+
+function renderAll() { renderChrome(); renderSlots(); renderSettings(); renderNote(); renderRaw(); draw(); }
+
+function renderChrome() {
+  $('fileLabel').innerHTML = file ? `<b>${esc(fileName)}</b>${dirty ? ' <span class="dirty">edited</span>' : ''}` : '';
+  $('undoBtn').disabled = !undoStack.length;
+  $('redoBtn').disabled = !redoStack.length;
+  $('saveBtn').disabled = $('playBtn').disabled = !file;
+  $('copyBtn').disabled = !file || isBlank(P);
+  $('pasteBtn').disabled = !clipboard;
+  $('clearBtn').disabled = !file || !steps.some((s) => s.length);
+  if (!file) return;
+  const count = steps.reduce((a, s) => a + s.length, 0);
+  $('where').textContent = `Bank ${bank}, pattern ${number}: ${isBlank(P) ? 'empty slot' : count + ' notes'}`;
+  const ok = isBlank(P) || KS2.storedChecksum(P.blob) === (KS2.xorSum(P.blob) ^ KS2.CHECKSUM_BIAS);
+  $('checksum').textContent = isBlank(P) ? '' : ok ? 'Checksum OK' : 'Checksum differs from expected';
+  $('checksum').className = ok ? '' : 'bad';
+  if (!$('status').textContent) say('');
+}
+
+function slotPreview(p) {
+  if (isBlank(p)) return '<svg viewBox="0 0 64 26" aria-hidden="true"></svg>';
+  const st = KS2.readSteps(p.blob), all = st.flat().map((o) => o.n);
+  const lo = Math.min(...all), hi = Math.max(...all), span = Math.max(hi - lo, 6);
+  const len = KS2.getParam(p, 'length');
+  let rects = '';
+  st.forEach((notes, i) => notes.forEach((o) => {
+    const y = 1 + (1 - (o.n - lo) / span) * 22;
+    rects += `<rect x="${i}" y="${y.toFixed(1)}" width="${Math.max(0.9, o.l / 2 - 0.15)}" height="2"${i >= len ? ' opacity=".25"' : ''}/>`;
+  }));
+  return `<svg viewBox="0 0 64 26" preserveAspectRatio="none" aria-hidden="true">${rects}</svg>`;
+}
+
+function renderSlots() {
+  $('banks').innerHTML = [1, 2, 3, 4].map((b) =>
+    `<button data-bank="${b}" aria-pressed="${b === bank}" title="Bank ${b}">${b}</button>`).join('');
+  let html = '';
+  for (let n = 1; n <= 16; n++) {
+    const p = getPattern(bank, n);
+    if (!p) continue;
+    const blank = isBlank(p);
+    html += `<button class="slot${blank ? ' empty' : ''}" data-number="${n}" aria-pressed="${n === number}"
+      aria-label="Pattern ${n}${blank ? ', empty' : ''}"><span class="num">${n}</span>${slotPreview(p)}
+      <span class="len" title="Length in steps">${blank ? '' : KS2.getParam(p, 'length')}</span></button>`;
+  }
+  $('slots').innerHTML = html;
+}
+
+function renderSettings() {
+  $('settings').innerHTML = KS2.PARAMS.map((d) => {
+    const id = 'p_' + d.key;
+    if (d.list) {
+      const v = KS2.getParam(P, d.key);
+      return `<label for="${id}">${d.label}</label><select id="${id}" data-param="${d.key}">${d.list.map((s, i) =>
+        `<option value="${i}"${i === v ? ' selected' : ''}>${esc(s)}</option>`).join('')}</select>`;
+    }
+    const s = d.scale || 1, unit = d.zeroOff ? '0 = off' : d.unit || '';
+    return `<label for="${id}">${d.label}</label><span class="with-unit">
+      <input id="${id}" data-param="${d.key}" type="number" min="${d.min * s}" max="${d.max * s}" step="${s}" value="${KS2.getParam(P, d.key)}">
+      <span class="unit">${unit}</span></span>`;
+  }).join('');
+}
+
+function renderNote() {
+  if (!sel) {
+    $('noteBox').innerHTML = `<div class="empty-note">${isBlank(P) ? 'Empty slot. Click the grid to add the first note.' : 'No note selected.'}</div>`;
+    return;
+  }
+  const o = sel.note;
+  const row = (label, f, attrs, unit) => `<label for="n_${f}">${label}</label><span class="with-unit">
+    <input id="n_${f}" type="number" data-note="${f}" ${attrs}><span class="unit">${unit}</span></span>`;
+  $('noteBox').innerHTML = `<div class="rows">
+    ${row('Pitch', 'n', `min="0" max="127" value="${o.n}"`, KS2.noteName(o.n))}
+    ${row('Step', 's', `min="1" max="64" value="${sel.step + 1}"`, '')}
+    ${row('Velocity', 'v', `min="1" max="127" value="${o.v}"`, '')}
+    ${row('Length', 'l', `min="0.5" max="64" step="0.5" value="${o.l / 2}"`, 'steps')}
+    </div><button class="wide" id="deleteBtn" title="Delete (Del)">Delete note</button>`;
+}
+
+const hex = (bytes) => Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join(' ');
+
+function renderRaw() {
+  if (!$('raw').open) return;
+  if (isBlank(P)) { $('rawBody').innerHTML = '<p>Empty slot: all 4096 bytes are FF.</p>'; return; }
+  const b = P.blob, s = sel ? sel.step : 0, o = KS2.STEPS_OFFSET + s * KS2.RECORD_SIZE;
+  const rec = (label, from, len) => `<dt>+${from} ${label}</dt><dd class="hex">${hex(b.subarray(o + from, o + from + len))}</dd>`;
+  const stored = KS2.storedChecksum(b), calc = KS2.xorSum(b) ^ KS2.CHECKSUM_BIAS;
+  const hx = (v) => v.toString(16).toUpperCase().padStart(4, '0');
+  const known = new Set(KS2.PARAMS.map((d) => d.offset));
+  const other = [];
+  for (let off = 1; off < KS2.STEPS_OFFSET; off += 2) {
+    const w = KS2.word(b, off);
+    if (!known.has(off) && w) other.push(`${off}:${hx(w)}`);
+  }
+  $('rawBody').innerHTML = `
+    <h3>Step ${s + 1} record at ${o}</h3>
+    <dl>${rec('Notes (80 = empty)', 0, 8)}${rec('Velocities', 8, 8)}${rec('Lengths, half-steps', 16, 8)}
+      ${rec('Unknown, always 00', 24, 8)}${rec('Flags (byte 34 = has notes)', 32, 4)}</dl>
+    <h3>Checksum at ${KS2.CHECKSUM_OFFSET}</h3>
+    <table><tr><th>Stored</th><td class="hex">${hx(stored)}</td><th>Computed</th>
+      <td class="hex${stored === calc ? '' : ' bad'}">${hx(calc)}</td></tr></table>
+    <p>XOR of the 96 header words and every step byte, XOR 3FFF.</p>
+    <h3>Header words</h3>
+    <table><tr><th></th><th>Offset</th><th>Word</th></tr>${KS2.PARAMS.map((d) => `<tr><th>${d.label}</th>
+      <td class="hex">${d.offset}</td><td class="hex">${hx(KS2.word(b, d.offset))}</td></tr>`).join('')}</table>
+    <p>15-bit: stored value ÷ range × 32767. Other non-zero words (offset:value):</p>
+    <p class="hex">${other.join(' ')}</p>`;
+}
+
+// ---- rendering: piano roll --------------------------------------------------
+function draw() {
+  const dpr = window.devicePixelRatio || 1, W = canvas.clientWidth, H = canvas.clientHeight;
+  if (!file || !W || !H) return;
+  if (canvas.width !== Math.round(W * dpr) || canvas.height !== Math.round(H * dpr)) {
+    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+  }
+  topPitch = clampTop(topPitch);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const cs = getComputedStyle(document.documentElement), c = (n) => cs.getPropertyValue(n).trim();
+  const col = { bg: c('--bg'), panel: c('--panel'), surface: c('--surface'), sunken: c('--sunken'), ink: c('--ink'),
+    muted: c('--muted'), line: c('--line'), strong: c('--line-strong'), note: c('--note'), accent: c('--accent') };
+  const cw = colW(), len = KS2.getParam(P, 'length'), ROWS = rows(), GH = ROWS * ROWH, VT = velTop();
+  const xOf = (step) => KEYW + step * cw, yOf = (pitch) => RULER + (topPitch - pitch) * ROWH;
+  ctx.fillStyle = col.surface; ctx.fillRect(0, 0, W, H);
+  ctx.font = `11px ${cs.getPropertyValue('--font')}`;
+  ctx.textBaseline = 'middle';
+
+  // rows
+  for (let r = 0; r < ROWS; r++) {
+    const pitch = topPitch - r, y = RULER + r * ROWH;
+    if (BLACK[pitch % 12]) { ctx.fillStyle = col.sunken; ctx.fillRect(0, y, W, ROWH); }
+    if (pitch % 12 === 0 || pitch % 12 === 5) { ctx.fillStyle = col.line; ctx.fillRect(0, y + ROWH - 0.5, W, 1); }
+    if (pitch % 12 === 0) { ctx.fillStyle = col.muted; ctx.fillText(KS2.noteName(pitch), 8, y + ROWH / 2 + 0.5); }
+  }
+  // velocity lane background
+  ctx.fillStyle = col.panel; ctx.fillRect(0, RULER + GH, W, H - RULER - GH);
+  ctx.fillStyle = col.line; ctx.fillRect(0, RULER + GH - 0.5, W, 1);
+  // columns
+  for (let s = 0; s <= 64; s++) {
+    ctx.fillStyle = s % 16 === 0 ? col.strong : col.line;
+    ctx.globalAlpha = s % 4 === 0 ? 1 : 0.45;
+    ctx.fillRect(Math.round(xOf(s)) - 0.5, RULER, 1, GH);
+    ctx.fillRect(Math.round(xOf(s)) - 0.5, VT, 1, VELH);
+  }
+  ctx.globalAlpha = 1;
+  if (playing && playhead >= 0) {
+    ctx.fillStyle = col.accent; ctx.globalAlpha = 0.16;
+    ctx.fillRect(xOf(playhead), RULER, cw, H - RULER);
+    ctx.globalAlpha = 1;
+  }
+
+  // notes
+  ctx.save();
+  ctx.beginPath(); ctx.rect(KEYW, RULER, W - KEYW, GH); ctx.clip();
+  steps.forEach((notes, s) => notes.forEach((o) => {
+    const x = xOf(s) + 1, y = yOf(o.n) + 1, w = Math.max(o.l / 2 * cw - 2, 4), h = ROWH - 2;
+    ctx.globalAlpha = 0.4 + 0.6 * (o.v / 127);
+    ctx.fillStyle = col.note;
+    ctx.beginPath(); ctx.roundRect(x, y, w, h, 2.5); ctx.fill();
+    ctx.globalAlpha = 1;
+    if (sel && sel.note === o) {
+      ctx.strokeStyle = col.accent; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.roundRect(x - 1, y - 1, w + 2, h + 2, 3.5); ctx.stroke();
+    }
+  }));
+  ctx.restore();
+
+  // velocity lane
+  ctx.fillStyle = col.muted; ctx.fillText('Vel', 8, VT + 10);
+  steps.forEach((notes, s) => {
+    const sorted = notes.slice().sort((a, b) => a.n - b.n), bw = Math.min(6, (cw - 3) / Math.max(sorted.length, 1));
+    sorted.forEach((o, i) => {
+      const h = Math.max(2, o.v / 127 * (VELH - 4));
+      ctx.fillStyle = sel && sel.note === o ? col.accent : col.note;
+      ctx.fillRect(xOf(s) + 2 + i * bw, H - h, Math.max(bw - 1, 1.5), h);
+    });
+  });
+
+  // beyond pattern length
+  ctx.fillStyle = col.bg; ctx.globalAlpha = 0.62;
+  ctx.fillRect(xOf(len), RULER, W - xOf(len), H - RULER);
+  ctx.globalAlpha = 1;
+
+  // ruler and length marker
+  ctx.fillStyle = col.panel; ctx.fillRect(0, 0, W, RULER);
+  ctx.fillStyle = col.line; ctx.fillRect(0, RULER - 0.5, W, 1);
+  for (let s = 0; s < 64; s += cw < 14 ? 4 : 1) {
+    if (s % 4 && cw < 26) continue;
+    ctx.fillStyle = s < len ? (s % 4 === 0 ? col.ink : col.muted) : col.strong;
+    ctx.fillText(String(s + 1), xOf(s) + 3, RULER / 2);
+  }
+  const lx = Math.round(xOf(len));
+  ctx.fillStyle = col.ink;
+  ctx.fillRect(lx - 1, 0, 2, H);
+  ctx.beginPath(); ctx.moveTo(lx, 0); ctx.lineTo(lx - 9, 0); ctx.lineTo(lx - 9, 7); ctx.lineTo(lx, 13); ctx.closePath(); ctx.fill();
+}
+
+// ---- pointer editing --------------------------------------------------------
+let drag = null;
+
+function locate(e) {
+  const r = canvas.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, cw = colW();
+  const stepF = (x - KEYW) / cw;
+  return { x, y, cw, stepF, step: clamp(Math.floor(stepF), 0, 63), pitch: topPitch - Math.floor((y - RULER) / ROWH),
+    zone: y < RULER ? 'ruler' : y < gridBottom() ? (x < KEYW ? 'keys' : 'grid') : y >= velTop() ? 'vel' : 'gap' };
+}
+
+function noteAt(p) {
+  let hit = null;
+  steps.forEach((notes, s) => notes.forEach((o) => {
+    const end = s + Math.max(o.l / 2, 4 / p.cw);
+    if (o.n === p.pitch && p.stepF >= s && p.stepF < end) {
+      const wide = o.l / 2 * p.cw >= 12;
+      hit = { step: s, note: o, edge: wide && (end - p.stepF) * p.cw <= 6 };
+    }
+  }));
+  return hit;
+}
+
+function touch() { if (!drag.snapped) { snapshot(); drag.snapped = true; } }
+
+function paintVelocity(p) {
+  const notes = steps[p.step];
+  if (!notes.length || p.x < KEYW) return;
+  const v = clamp(Math.round((canvas.clientHeight - p.y) / (VELH - 4) * 127), 1, 127);
+  const targets = sel && sel.step === p.step ? [sel.note] : notes;
+  if (targets.every((o) => o.v === v)) return;
+  touch();
+  targets.forEach((o) => { o.v = v; });
+  lastVel = v;
+  commit([p.step]);
+}
+
+function setLengthFrom(p) {
+  const len = clamp(Math.round(p.stepF), 1, 64);
+  if (len === KS2.getParam(P, 'length')) return;
+  touch();
+  KS2.setParam(P, 'length', len);
+}
+
+canvas.addEventListener('pointerdown', (e) => {
+  if (e.button !== 0 || !file) return;
+  canvas.focus({ preventScroll: true });
+  const p = locate(e);
+  drag = { mode: null, snapped: false };
+  if (p.zone === 'ruler') { drag.mode = 'length'; setLengthFrom(p); }
+  else if (p.zone === 'vel') { drag.mode = 'vel'; paintVelocity(p); }
+  else if (p.zone === 'keys') { blip(p.pitch, 100); drag = null; return; }
+  else if (p.zone === 'grid') {
+    const hit = noteAt(p);
+    if (hit) {
+      sel = { step: hit.step, note: hit.note };
+      drag.mode = hit.edge ? 'resize' : 'move';
+      drag.grab = p.stepF - hit.step;
+      if (!hit.edge) audition(hit.note);
+    } else {
+      touch();
+      const note = addNote(p.step, p.pitch);
+      if (!note) { undoStack.pop(); drag = null; renderAll(); return; }
+      sel = { step: p.step, note }; drag.mode = 'move'; drag.grab = 0.5;
+      audition(note);
+    }
+  } else { drag = null; return; }
+  canvas.setPointerCapture(e.pointerId);
+  renderNote(); draw();
+});
+
+canvas.addEventListener('pointermove', (e) => {
+  if (!file) return;
+  const p = locate(e);
+  if (!drag) {
+    const hit = p.zone === 'grid' ? noteAt(p) : null;
+    canvas.style.cursor = p.zone === 'ruler' ? 'ew-resize' : p.zone === 'vel' ? 'ns-resize'
+      : hit ? (hit.edge ? 'ew-resize' : 'grab') : p.zone === 'keys' ? 'pointer' : 'crosshair';
+    return;
+  }
+  if (drag.mode === 'length') setLengthFrom(p);
+  else if (drag.mode === 'vel') paintVelocity(p);
+  else if (drag.mode === 'move') {
+    const toStep = clamp(Math.floor(p.stepF - drag.grab + 0.5), 0, 63), toPitch = clamp(p.pitch, 0, 127);
+    if (toStep !== sel.step || toPitch !== sel.note.n) {
+      const before = undoStack.length;
+      touch();
+      if (!moveNote(sel, toStep, toPitch) && undoStack.length > before) { undoStack.pop(); drag.snapped = false; }
+    }
+  } else if (drag.mode === 'resize') {
+    const l = clamp(Math.round((p.stepF - sel.step) * 2), 1, KS2.MAX_NOTE_LENGTH);
+    if (l !== sel.note.l) { touch(); sel.note.l = l; lastLen = l; commit([sel.step]); }
+  }
+  renderNote(); draw();
+});
+
+function endDrag() {
+  if (!drag) return;
+  drag = null;
+  renderAll();
+}
+canvas.addEventListener('pointerup', endDrag);
+canvas.addEventListener('pointercancel', endDrag);
+
+function removeAt(e) {
+  if (!file) return;
+  const p = locate(e), hit = p.zone === 'grid' ? noteAt(p) : null;
+  if (!hit) return;
+  snapshot(); deleteNote(hit); renderAll();
+}
+canvas.addEventListener('dblclick', removeAt);
+canvas.addEventListener('contextmenu', (e) => { e.preventDefault(); removeAt(e); });
+canvas.addEventListener('wheel', (e) => {
+  if (!file || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+  e.preventDefault();
+  topPitch = clampTop(topPitch - Math.sign(e.deltaY) * Math.max(1, Math.round(Math.abs(e.deltaY) / 30)));
+  draw();
+}, { passive: false });
+
+// ---- keyboard ---------------------------------------------------------------
+document.addEventListener('keydown', (e) => {
+  const mod = e.metaKey || e.ctrlKey, k = e.key.toLowerCase();
+  if (mod && k === 'o') { e.preventDefault(); $('fileInput').click(); return; }
+  if (!file) return;
+  const typing = /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName);
+  if (mod && k === 'z') { e.preventDefault(); e.shiftKey ? restore(redoStack, undoStack) : restore(undoStack, redoStack); return; }
+  if (mod && k === 's') { e.preventDefault(); saveCopy(); return; }
+  if (typing || mod) return;
+  if (e.key === ' ') { e.preventDefault(); togglePlay(); return; }
+  if (!sel) return;
+  const arrows = { ArrowUp: [0, 1], ArrowDown: [0, -1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }[e.key];
+  if (arrows) {
+    e.preventDefault();
+    const before = undoStack.length;
+    snapshot();
+    let ok;
+    if (e.shiftKey && arrows[0]) {
+      const l = clamp(sel.note.l + arrows[0], 1, KS2.MAX_NOTE_LENGTH);
+      ok = l !== sel.note.l;
+      if (ok) { sel.note.l = l; lastLen = l; commit([sel.step]); }
+    } else {
+      ok = moveNote(sel, sel.step + arrows[0], sel.note.n + arrows[1] * (e.shiftKey ? 12 : 1));
+    }
+    if (!ok) undoStack.length = before;
+    if (sel.note.n > topPitch) topPitch = sel.note.n;
+    if (sel.note.n < topPitch - rows() + 1) topPitch = sel.note.n + rows() - 1;
+    renderAll();
+  } else if (e.key === 'Delete' || e.key === 'Backspace') {
+    e.preventDefault(); snapshot(); deleteNote(sel); renderAll();
+  } else if (e.key === 'Escape') { sel = null; renderAll(); }
+});
+
+// ---- sound ------------------------------------------------------------------
+let ac = null, master = null, playing = false, playhead = -1, nextTime = 0, playStep = 0, timer = 0, queue = [];
+
+function audio() {
+  if (!ac) {
+    ac = new (window.AudioContext || window.webkitAudioContext)();
+    master = ac.createGain(); master.gain.value = 0.22;
+    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2400;
+    master.connect(lp).connect(ac.destination);
+  }
+  if (ac.state === 'suspended') ac.resume();
+  return ac;
+}
+
+function voice(pitch, vel, t, dur) {
+  const osc = ac.createOscillator(), g = ac.createGain();
+  osc.type = 'triangle';
+  osc.frequency.value = 440 * Math.pow(2, (pitch - 69) / 12);
+  const peak = 0.15 + 0.85 * (vel / 127);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(peak, t + 0.005);
+  g.gain.setValueAtTime(peak, t + Math.max(dur, 0.03));
+  g.gain.linearRampToValueAtTime(0, t + Math.max(dur, 0.03) + 0.05);
+  osc.connect(g).connect(master);
+  osc.start(t); osc.stop(t + Math.max(dur, 0.03) + 0.06);
+}
+
+function blip(pitch, vel) { if (soundOn && pitch >= 0 && pitch <= 127) { audio(); voice(pitch, vel, ac.currentTime, 0.14); } }
+function audition(note) { if (!playing) blip(note.n, note.v); }
+
+function stepSeconds() {
+  const name = KS2.formatParam(P, 'division'), m = name.match(/^1\/(\d+)([DT]?)$/);
+  let beats = m ? 4 / +m[1] : 0.25;
+  if (m && m[2] === 'D') beats *= 1.5;
+  if (m && m[2] === 'T') beats *= 2 / 3;
+  return 60 / KS2.getParam(P, 'tempo') * beats;
+}
+
+function schedule() {
+  while (nextTime < ac.currentTime + 0.12) {
+    const d = stepSeconds(), len = KS2.getParam(P, 'length'), gate = KS2.getParam(P, 'gate') / 100;
+    if (playStep >= len) playStep = 0;
+    const t = nextTime + (playStep % 2 ? (KS2.getParam(P, 'swing') / 50 - 1) * d : 0);
+    for (const o of steps[playStep]) voice(o.n, o.v, t, o.l >= 2 ? d * (o.l / 2 - 1 + gate) : d * gate / 2);
+    queue.push({ step: playStep, t });
+    nextTime += d; playStep++;
+  }
+}
+
+function frame() {
+  if (!playing) return;
+  while (queue.length > 1 && queue[1].t <= ac.currentTime) queue.shift();
+  const now = queue.length && queue[0].t <= ac.currentTime ? queue[0].step : playhead;
+  if (now !== playhead) { playhead = now; draw(); }
+  requestAnimationFrame(frame);
+}
+
+function togglePlay() { playing ? stop() : play(); }
+function play() {
+  if (!file) return;
+  audio();
+  playing = true; playStep = 0; playhead = -1; queue = []; nextTime = ac.currentTime + 0.06;
+  timer = setInterval(schedule, 25); schedule();
+  requestAnimationFrame(frame);
+  $('playBtn').textContent = 'Stop'; $('playBtn').setAttribute('aria-pressed', 'true');
+}
+function stop() {
+  if (!playing) return;
+  playing = false; clearInterval(timer); playhead = -1;
+  $('playBtn').textContent = 'Play'; $('playBtn').setAttribute('aria-pressed', 'false');
+  draw();
+}
+
+// ---- controls ---------------------------------------------------------------
+$('openBtn').onclick = $('chooseBtn').onclick = () => $('fileInput').click();
+$('fileInput').onchange = (e) => { if (e.target.files[0]) openFile(e.target.files[0]); e.target.value = ''; };
+$('saveBtn').onclick = saveCopy;
+$('undoBtn').onclick = () => restore(undoStack, redoStack);
+$('redoBtn').onclick = () => restore(redoStack, undoStack);
+$('playBtn').onclick = togglePlay;
+$('soundBtn').onclick = () => { soundOn = !soundOn; $('soundBtn').setAttribute('aria-pressed', soundOn); };
+
+$('banks').onclick = (e) => { const b = e.target.closest('[data-bank]'); if (b && file) selectPattern(+b.dataset.bank, number); };
+$('slots').onclick = (e) => { const b = e.target.closest('[data-number]'); if (b) selectPattern(bank, +b.dataset.number); };
+
+$('settings').addEventListener('change', (e) => {
+  const key = e.target.dataset.param;
+  if (!key) return;
+  const v = parseFloat(e.target.value);
+  if (Number.isNaN(v)) { renderSettings(); return; }
+  setParam(key, v);
+});
+
+$('noteBox').addEventListener('change', (e) => {
+  const f = e.target.dataset.note, v = parseFloat(e.target.value);
+  if (!f || Number.isNaN(v)) return;
+  setNoteField(f, f === 'l' ? Math.round(v * 2) : Math.round(v));
+});
+$('noteBox').addEventListener('click', (e) => {
+  if (e.target.id === 'deleteBtn' && sel) { snapshot(); deleteNote(sel); renderAll(); }
+});
+
+$('copyBtn').onclick = () => {
+  clipboard = { blob: P.blob.slice(), params: { ...P.params }, bias: P.bias };
+  renderChrome(); say(`Copied pattern ${bank}-${number}. Select a slot and paste.`);
+};
+$('pasteBtn').onclick = () => {
+  if (!clipboard) return;
+  snapshot();
+  P.blob = clipboard.blob.slice(); P.params = { ...clipboard.params }; P.bias = clipboard.bias;
+  selectPattern(bank, number);
+};
+$('clearBtn').onclick = () => {
+  if (isBlank(P) || !steps.some((s) => s.length)) return;
+  snapshot();
+  steps = steps.map(() => []);
+  commit(steps.map((_, i) => i));
+  sel = null; renderAll();
+};
+$('raw').addEventListener('toggle', renderRaw);
+
+// drag and drop anywhere in the window
+let dragDepth = 0;
+addEventListener('dragenter', (e) => { e.preventDefault(); dragDepth++; document.body.classList.add('dragover'); });
+addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; document.body.classList.remove('dragover'); } });
+addEventListener('dragover', (e) => e.preventDefault());
+addEventListener('drop', (e) => {
+  e.preventDefault(); dragDepth = 0; document.body.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) openFile(e.dataTransfer.files[0]);
+});
+
+addEventListener('beforeunload', (e) => { if (dirty) e.preventDefault(); });
+new ResizeObserver(draw).observe(canvas);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw);
+
+// Served over http next to an export: open it straight away.
+if (location.protocol.startsWith('http')) {
+  fetch('export.keystep2').then((r) => (r.ok ? r.arrayBuffer() : null))
+    .then((buf) => { if (buf && !file) loadBytes(new Uint8Array(buf), 'export.keystep2'); })
+    .catch(() => {});
+}
+</script>
+</body>
+</html>
