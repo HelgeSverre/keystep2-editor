@@ -103,3 +103,14 @@ test('edits survive a save and reload', () => {
   // Untouched patterns are untouched.
   assert.deepEqual(again.patterns.get('1_16').blob, load().patterns.get('1_16').blob);
 });
+
+test('createProject reproduces the exported file byte for byte', () => {
+  const file = load();
+  const blobs = new Map([...file.patterns].map(([key, p]) => [key, p.blob]));
+  const params = new Map([...file.patterns].map(([key, p]) => [key, p.params]));
+  assert.deepEqual(KS2.serialize(KS2.createProject(blobs, params)), original);
+});
+
+test('paramsFromBlob recovers the text parameters', () => {
+  for (const p of filled(load())) assert.deepEqual(KS2.paramsFromBlob(p.blob), p.params, `pattern ${p.bank}-${p.number}`);
+});

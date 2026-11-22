@@ -23,8 +23,10 @@ Unofficial. Not affiliated with or endorsed by Arturia; KeyStep is their tradema
 - **Preview playback** with a playhead and lit keys.
 - **Pan and zoom** on both axes.
 - **Raw-byte inspector:** the step record, header words and checksum behind what you see.
-- **Skins** matching the white hardware, a dark variant, and a neutral one.
-- **Local only:** the file is read and written in the browser. Nothing is uploaded.
+- **Skins:** Light (after the white hardware), Dark and Classic.
+- **Direct to the device:** in Chrome or Edge, read patterns from a KeyStep mk2 connected by USB
+  and send edited ones back, without MIDI Control Center.
+- **Local only:** files and MIDI stay in the browser. Nothing is uploaded.
 
 ## Getting started
 
@@ -35,6 +37,20 @@ Unofficial. Not affiliated with or endorsed by Arturia; KeyStep is their tradema
 4. Import the copy in MIDI Control Center.
 
 Keep your original export. See [Status](#status) for what has and has not been verified.
+
+### Working on the device directly
+
+Needs Chrome or Edge (Web MIDI with SysEx) and the KeyStep mk2 connected by USB. Close MIDI Control
+Center first.
+
+1. Press **Connect KeyStep** and allow MIDI access when the browser asks.
+2. **Read all** copies all 64 patterns into a new project (about 1.5 minutes). **Read pattern**
+   replaces only the slot you are on.
+3. Edit, then **Send pattern**. It writes the slot you are on to the same slot on the device, reads
+   it back and compares it.
+
+Save a copy of what Read all returns before sending anything: that file is your backup, and MIDI
+Control Center can restore it.
 
 ### Running it locally
 
@@ -50,8 +66,9 @@ node --test        # codec tests
 |------|---------|
 | `index.html` | The editor |
 | `keystep2.js` | Codec: parse, edit, serialize. Reference implementation of the format |
+| `keystep2-midi.js` | Pattern transfer over MIDI SysEx. Reference implementation of the protocol |
 | `export.keystep2` | A factory project, used by the tests and as the demo file |
-| `fonts/` | Inter and Barlow Semi Condensed (SIL Open Font License), used by the KeyStep skins |
+| `fonts/` | Inter and Barlow Semi Condensed (SIL Open Font License), used by the Light and Dark skins |
 | `tests/` | Codec tests against `export.keystep2` |
 | `tools/` | Optional read-only command-line decoder in Python. See [`tools/README.md`](tools/README.md) |
 
@@ -82,26 +99,34 @@ Clicking the grid of an empty slot creates a pattern there.
 
 ## Skins
 
-The selector at the right of the toolbar switches skin; the choice is remembered in the browser.
+The sun, moon and palette buttons at the right of the toolbar switch skin; the choice is remembered in the browser.
 
 | Skin | Look |
 |------|------|
-| KeyStep (default) | The white hardware: matte white panel, blue Shift-button accent, black keys, OLED-style file readout |
-| KeyStep Dark | The same blue on a black body |
-| Classic | The original neutral look; follows the system light or dark setting |
+| Light (default) | After the white hardware: matte white panel, blue Shift-button accent, black keys, OLED-style file readout |
+| Dark | The same blue on a black body |
+| Classic | Charcoal with a yellow accent |
 
 A skin is one block of CSS custom properties on `:root[data-skin="…"]` at the top of `index.html`;
 the comment above the blocks lists every token. The piano roll reads the same tokens when it draws.
-To add a skin, copy a block, change the values and add an `<option>` to `#skinSelect`.
+To add a skin, copy a block, change the values and add a button with `data-skin` to `#skins`.
 
-The KeyStep colours are sampled from Arturia's product photos. This is an unofficial tool: no
+The Light and Dark colours are sampled from Arturia's product photos. This is an unofficial tool: no
 Arturia logo or licensed typeface is used.
 
 ## Status
 
-- Verified against one export (firmware file version 1.0.2, 16 factory patterns): an unedited file
-  serializes byte-identical, and the checksum and header rules below hold for all 16 patterns.
-- **Not verified:** importing an edited file into MCC or the device. Keep the original export.
+Tested with one KeyStep mk2 on firmware 1.0.2 and MIDI Control Center on macOS.
+
+| Verified | How |
+|----------|-----|
+| File format | An unedited file serializes byte-identical; a project built from scratch equals MCC's export byte for byte |
+| Checksum and header rules | Hold for the 16 factory patterns and for 48 blank patterns the device generated itself |
+| Reading from the device | All 64 patterns read over MIDI equal MCC's export |
+| Writing to the device | Patterns written to a spare slot, edited ones included, read back byte-identical; neighbouring slots unchanged |
+
+Not verified: other firmware versions (1.0.4 exists), importing an edited file through MCC, and
+what the device does if a transfer is interrupted. Keep a backup.
 
 ## File format
 
@@ -174,7 +199,90 @@ All 64 records are stored whatever the pattern length; steps past the length kee
 **Checksum.** XOR of the 96 header words, XOR of every step byte (193-2496), XOR 0x3FFF. The
 constant is inferred: it fits all 16 samples but its origin is unknown.
 
+## MIDI protocol
+
+Worked out from the traffic between MIDI Control Center and the device. All of it is SysEx on the
+device's USB MIDI port; MCC uses nothing else.
+
+### Framing
+
+```
+F0 00 20 6B <7-bit packed bytes> F7
+```
+
+`00 20 6B` is Arturia's manufacturer id. The rest is an ordinary byte stream cut into 7-bit groups,
+least significant bit first, the last group zero-padded. Unpacked, a request is:
+
+| Bytes | Content |
+|-------|---------|
+| 1 | Sequence number, 0-127, chosen by the sender |
+| 2 | Operation code, big-endian |
+| rest | Arguments as CBOR: unsigned integers and byte strings, shortest form |
+
+A reply that carries data starts with the request's sequence number with bit 7 set, followed by
+CBOR values. The device also sends plain acknowledgements (bit 7 clear) after some requests; they
+carry nothing a client needs.
+
+### Operations
+
+| Code | Arguments | Reply | Meaning |
+|------|-----------|-------|---------|
+| `3E69` | pattern | | Select a pattern for the parameter operations below |
+| `6CD6` | parameter id | id, value | Read a parameter of the selected pattern |
+| `7848` | parameter id, value | | Write a parameter of the selected pattern |
+| `08DF` | pattern | 32 bytes | Read the next block of a pattern blob |
+| `6E86` | pattern | | Start writing a pattern blob |
+| `10AC` | 32 bytes | | Write the next block |
+| `1B5D` | pattern | | Commit the pattern |
+| `2A89` | parameter id | id, value | Read a global setting |
+| `36FB` | parameter id, value | | Write a global setting |
+
+- **Pattern** is `(bank − 1) × 16 + (number − 1)`, 0 to 63.
+- **Parameter id** is the id from the file format (24580 for tempo, and so on).
+- **Value** is 15-bit: `stored value ÷ range × 32767`. MCC rounds halves up, so 50 % gate goes out
+  as `4000`; the device itself stores `3FFF` when it computes the same value.
+
+### Reading a pattern
+
+MCC sends select, 17 parameter reads, then 128 block reads. The parameter reads are redundant: the
+blob's header holds the same values.
+
+The device has one block reader, and its state matters:
+
+- It hands out 128 blocks, then answers with empty byte strings.
+- After that it stays empty for the pattern it just finished. A read for a different pattern
+  starts that one from its first block.
+- While it is mid-way, a select rewinds it to the start of the selected pattern but does not reset
+  the count of blocks left.
+
+Reading patterns one after another, each different from the last, needs only the block reads.
+A select sent just before them is harmful: in one run the reader then skipped every other block
+from the ninth on, apparently when the select took effect. MCC avoids this only because its 17
+parameter reads sit between the select and the blocks.
+
+To re-read a pattern, `keystep2-midi.js` runs the reader empty, reads one block of a neighbouring
+pattern, selects the wanted one, waits 250 ms and reads to the end. That yields 127 blocks; the
+128th is always 0xFF padding.
+
+Every pattern read is checked against its checksum and repeated once if it fails.
+
+### Writing a pattern
+
+The sequence MCC uses per pattern, and the one this project replays:
+
+1. `6E86` with the pattern, then 128 × `10AC`, about 5 ms apart. None are acknowledged.
+2. `3E69` with the pattern, wait about 50 ms.
+3. `7848` for each of the 17 text parameters.
+4. `1B5D` with the pattern.
+
+On commit the device rewrites the blob's header words from the parameters it was sent and
+recomputes the checksum. Writing an all-0xFF blob this way leaves a blank initialised pattern, not
+an empty slot; MCC's own Store To does the same to every empty slot.
+
+A full MCC store also writes the global settings with `36FB`. This project does not.
+
 ## Sources
 
 - Parameter definitions: `/Library/Arturia/MIDI Control Center/Resources/KeyStep2.json`
 - Binary layout: inferred from `export.keystep2`
+- MIDI protocol: recorded from MIDI Control Center talking to a KeyStep mk2

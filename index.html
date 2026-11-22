@@ -12,7 +12,7 @@
   /*
    * Skins. A skin is a block of custom properties on :root[data-skin="…"]; components read only
    * these tokens, and the piano roll reads them from the root at draw time. To add a skin, copy a
-   * block, change the values and add an <option> to #skinSelect.
+   * block, change the values and add a button with data-skin to #skins.
    *
    *   --bg            window background, and the wash over steps past the pattern length
    *   --panel         toolbar, side panes, ruler, velocity lane
@@ -33,7 +33,7 @@
    *   --font / --font-label / --mono   text, button and heading lettering, hex
    *   --label-case / --label-track     heading capitalisation and tracking
    */
-  :root, :root[data-skin="keystep"] {
+  :root, :root[data-skin="light"] {
     color-scheme: light;
     --bg: #d6d6da;
     --panel: #e5e5e7;
@@ -63,7 +63,7 @@
     --label-case: none;
     --label-track: 0.01em;
   }
-  :root[data-skin="keystep-dark"] {
+  :root[data-skin="dark"] {
     color-scheme: dark;
     --bg: #101012;
     --panel: #1b1b1e;
@@ -87,55 +87,33 @@
     --display-bg: #000000;
     --display-ink: #b4e6f1;
   }
+  /* Charcoal neutrals and yellow accent, after ../terminal's theme. */
   :root[data-skin="classic"] {
-    color-scheme: light dark;
-    --bg: #e4e7eb;
-    --panel: #eef0f3;
-    --surface: #f8f9fa;
-    --sunken: #dde1e6;
-    --ink: #161a20;
-    --muted: #5f6772;
-    --label: #5f6772;
-    --line: #c6ccd4;
-    --line-strong: #a3abb6;
-    --btn-bg: #f8f9fa;
-    --btn-edge: #c6ccd4;
-    --select: #2b3bc4;
-    --on-select: #ffffff;
-    --note: #2b3bc4;
-    --accent: #d9481f;
-    --playhead: #d9481f;
-    --hover: rgba(255, 255, 255, 0.7);
-    --key-white: #f8f9fa;
-    --key-black: #3a3f47;
+    color-scheme: dark;
+    --bg: #0a0a0b;
+    --panel: #111113;
+    --surface: #1b1c1f;
+    --sunken: #141416;
+    --ink: #e6e6e6;
+    --muted: #8e8f96;
+    --label: #b4b5ba;
+    --line: #26272b;
+    --line-strong: #3d3e44;
+    --btn-bg: #1b1c1f;
+    --btn-edge: #2e2e34;
+    --select: #facc15;
+    --on-select: #111113;
+    --note: #facc15;
+    --accent: #ffffff;
+    --playhead: #facc15;
+    --hover: rgba(255, 255, 255, 0.05);
+    --key-white: #c9c9cf;
+    --key-black: #0a0a0b;
     --display-bg: transparent;
-    --display-ink: #161a20;
-    --radius: 5px;
+    --display-ink: #e6e6e6;
+    --radius: 6px;
     --font: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
     --font-label: var(--font);
-  }
-  @media (prefers-color-scheme: dark) {
-    :root[data-skin="classic"] {
-      --bg: #17191d;
-      --panel: #1f2226;
-      --surface: #272b31;
-      --sunken: #1a1c20;
-      --ink: #e6e8eb;
-      --muted: #969da8;
-      --label: #969da8;
-      --line: #34393f;
-      --line-strong: #525963;
-      --btn-bg: #272b31;
-      --btn-edge: #34393f;
-      --select: #4a59d6;
-      --note: #93a0ff;
-      --accent: #ff7d4f;
-      --playhead: #ff7d4f;
-      --hover: rgba(255, 255, 255, 0.07);
-      --key-white: #c9cdd3;
-      --key-black: #101214;
-      --display-ink: #e6e8eb;
-    }
   }
 
   * { box-sizing: border-box; }
@@ -166,26 +144,50 @@
     height: 24px; padding: 1px 6px; user-select: text; -webkit-user-select: text;
   }
 
-  /* Toolbar */
+  /* Toolbar: document and editing on the left, transport in the middle, device and skin on the right */
   .toolbar {
-    display: flex; align-items: center; gap: 6px; padding: 6px 10px;
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 6px 16px; padding: 6px 10px;
     background: var(--panel); border-bottom: 1px solid var(--line);
   }
-  .toolbar .sep { width: 1px; height: 18px; background: var(--line); margin: 0 4px; }
-  .toolbar .wordmark { font-family: var(--font-label); font-size: 17px; font-weight: 500; letter-spacing: 0.02em; margin-right: 8px; white-space: nowrap; }
-  .toolbar .wordmark { color: var(--muted); }
+  .toolbar .side { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .toolbar .side.end { justify-content: flex-end; }
+  .toolbar .grp { display: flex; flex: none; }
+  .toolbar .grp button { border-radius: 0; margin-left: -1px; }
+  .toolbar .grp button:first-child { border-radius: var(--radius) 0 0 var(--radius); margin-left: 0; }
+  .toolbar .grp button:last-child { border-radius: 0 var(--radius) var(--radius) 0; }
+  .toolbar .grp button:only-child { border-radius: var(--radius); }
+  .toolbar .grp button:hover:not(:disabled), .toolbar .grp button[aria-pressed="true"] { position: relative; }
+  .toolbar .wordmark { font-family: var(--font-label); font-size: 17px; font-weight: 500; letter-spacing: 0.02em; white-space: nowrap; color: var(--muted); }
   .toolbar .wordmark b { font-weight: 600; color: var(--ink); }
   .toolbar .wordmark span { color: var(--label); font-size: 13px; margin-left: 5px; }
   .toolbar .doc {
-    margin-left: auto; padding: 0 10px; height: 24px; line-height: 24px; border-radius: var(--radius);
+    padding: 0 10px; height: 24px; line-height: 24px; border-radius: var(--radius); min-width: 0;
     background: var(--display-bg); color: var(--display-ink); font-size: 12px;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .toolbar .doc:empty { display: none; }
   .toolbar .doc b { font-weight: 600; }
   .toolbar .doc .dirty { opacity: 0.7; }
-  .toolbar select { height: 26px; border-color: var(--btn-edge); background: var(--btn-bg); font-family: var(--font-label); font-size: 13px; }
   #playBtn { min-width: 64px; font-weight: 600; }
+  #midiBtn::before {
+    content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 7px;
+    background: var(--line-strong); vertical-align: 1px;
+  }
+  #midiBtn[aria-pressed="true"] { background: var(--btn-bg); color: var(--ink); border-color: var(--btn-edge); }
+  #midiBtn[aria-pressed="true"]::before { background: var(--select); }
+  .skins { display: flex; flex: none; gap: 2px; margin-left: 2px; }
+  .skins button {
+    width: 24px; height: 24px; padding: 0; border: 0; background: none; color: var(--ink); opacity: 0.4;
+    display: grid; place-items: center;
+  }
+  .skins button:hover:not(:disabled) { opacity: 0.8; background: none; }
+  .skins button[aria-pressed="true"] { opacity: 1; background: none; color: var(--ink); }
+  .skins svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .skins button[aria-pressed="true"] svg { stroke-width: 2; }
+  @media (max-width: 1180px) {
+    .toolbar { grid-template-columns: 1fr; }
+    .toolbar .side, .toolbar .side.end { flex-wrap: wrap; justify-content: flex-start; }
+  }
 
   /* Workspace */
   #work { display: grid; grid-template-columns: 208px minmax(0, 1fr) 272px; min-height: 0; }
@@ -222,7 +224,27 @@
   .slot-actions button { padding: 0; }
 
   /* Roll */
-  #stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: var(--surface); }
+  #stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: var(--surface); display: grid; grid-template-rows: auto minmax(0, 1fr); }
+  canvas#roll { grid-row: 2; min-height: 0; }
+
+  /* Device transfer header, shown above the roll while reading or sending */
+  #xfer {
+    grid-row: 1; padding: 16px 20px 12px; background: var(--panel); border-bottom: 1px solid var(--line);
+    display: grid; grid-template-columns: 1fr auto; gap: 6px 20px; align-items: end;
+  }
+  #xfer .what { font: 500 13px var(--font-label); color: var(--label); }
+  #xfer .big { font: 600 30px/1.05 var(--font-label); letter-spacing: 0.01em; }
+  #xfer .big span { color: var(--muted); font-weight: 500; }
+  #xfer .time { text-align: right; color: var(--muted); }
+  #xfer .time strong { display: block; font: 600 20px/1.1 var(--font-label); color: var(--ink); }
+  #xfer .track { grid-column: 1 / -1; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; height: 14px; margin-top: 6px; }
+  #xfer .track i { background: var(--sunken); border: 1px solid var(--line); border-radius: 2px; position: relative; overflow: hidden; }
+  #xfer .track.banked i:nth-child(16n + 1):not(:first-child) { margin-left: 5px; }
+  #xfer .track i.done { background: var(--select); border-color: var(--select); }
+  #xfer .track i.now::after { content: ""; position: absolute; inset: 0; width: var(--w, 0%); background: var(--select); }
+  #xfer .foot { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 4px; color: var(--muted); }
+  #xfer .banks { display: grid; grid-template-columns: repeat(4, 1fr); flex: 1; font-size: 11.5px; }
+  #xfer #xferNote { flex: 1; font-size: 11.5px; }
   canvas#roll { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; outline: none; }
   #drop {
     position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px;
@@ -256,6 +278,15 @@
   .bad { color: var(--accent); font-weight: 600; }
   #rawBody p { color: var(--muted); font-size: 11.5px; margin: 6px 0 0; }
 
+  dialog {
+    background: var(--panel); color: var(--ink); border: 1px solid var(--line-strong); border-radius: 8px;
+    padding: 16px 18px; max-width: 420px; font: inherit;
+  }
+  dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
+  dialog p { margin: 0 0 14px; font-size: 13.5px; line-height: 1.45; }
+  dialog form { display: flex; justify-content: flex-end; gap: 8px; }
+  dialog #confirmOk { background: var(--select); color: var(--on-select); border-color: var(--select); }
+
   /* Status bar */
   .statusbar {
     display: flex; gap: 16px; align-items: center; padding: 4px 10px; height: 24px;
@@ -269,22 +300,42 @@
 <body>
 <div id="shell">
   <header class="toolbar">
-    <span class="wordmark">KEY<b>STEP</b><span>mk2 editor</span></span>
-    <button id="openBtn" title="Open a .keystep2 project">Open…</button>
-    <button id="saveBtn" disabled title="Save a copy (Cmd/Ctrl+S). The opened file is not overwritten.">Save a copy…</button>
-    <span class="sep"></span>
-    <button id="undoBtn" disabled title="Undo (Cmd/Ctrl+Z)">Undo</button>
-    <button id="redoBtn" disabled title="Redo (Shift+Cmd/Ctrl+Z)">Redo</button>
-    <span class="sep"></span>
-    <button id="playBtn" aria-pressed="false" disabled title="Play or stop (Space)">Play</button>
-    <button id="soundBtn" aria-pressed="true" title="Play notes as you add or move them">Audition</button>
-    <button id="fitBtn" disabled title="Show the whole pattern (F)">Fit</button>
-    <span class="doc" id="fileLabel"></span>
-    <select id="skinSelect" aria-label="Skin" title="Skin">
-      <option value="keystep">KeyStep</option>
-      <option value="keystep-dark">KeyStep Dark</option>
-      <option value="classic">Classic</option>
-    </select>
+    <div class="side">
+      <span class="wordmark">KEY<b>STEP</b><span>mk2 editor</span></span>
+      <div class="grp" role="group" aria-label="File">
+        <button id="openBtn" title="Open a .keystep2 project (Cmd/Ctrl+O)">Open…</button>
+        <button id="saveBtn" disabled title="Save a copy (Cmd/Ctrl+S). The opened file is not overwritten.">Save a copy…</button>
+      </div>
+      <div class="grp" role="group" aria-label="Edit">
+        <button id="undoBtn" disabled title="Undo (Cmd/Ctrl+Z)">Undo</button>
+        <button id="redoBtn" disabled title="Redo (Shift+Cmd/Ctrl+Z)">Redo</button>
+      </div>
+      <span class="doc" id="fileLabel"></span>
+    </div>
+    <div class="grp" role="group" aria-label="Playback and view">
+      <button id="playBtn" aria-pressed="false" disabled title="Play or stop (Space)">Play</button>
+      <button id="soundBtn" aria-pressed="true" title="Play notes as you add or move them">Audition</button>
+      <button id="fitBtn" disabled title="Show the whole pattern (F)">Fit</button>
+    </div>
+    <div class="side end">
+      <div class="grp" role="group" aria-label="Device">
+        <button id="midiBtn" aria-pressed="false" title="Connect to a KeyStep mk2 over USB (Chrome or Edge)">Connect KeyStep</button>
+        <button id="readAllBtn" disabled title="Read all 64 patterns from the device into a new project">Read all</button>
+        <button id="readOneBtn" disabled title="Replace this slot with the same slot from the device">Read pattern</button>
+        <button id="sendBtn" disabled title="Write this pattern to the same slot on the device">Send pattern</button>
+      </div>
+  <div class="skins" id="skins" role="group" aria-label="Skin">
+      <button data-skin="light" aria-pressed="false" aria-label="Light skin" title="Light">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3"/><path d="M8 1.2v1.6M8 13.2v1.6M1.2 8h1.6M13.2 8h1.6M3.2 3.2l1.1 1.1M11.7 11.7l1.1 1.1M3.2 12.8l1.1-1.1M11.7 4.3l1.1-1.1"/></svg>
+      </button>
+      <button data-skin="dark" aria-pressed="false" aria-label="Dark skin" title="Dark">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.4 9.6A5.6 5.6 0 0 1 6.4 2.6a5.6 5.6 0 1 0 7 7z"/></svg>
+      </button>
+      <button data-skin="classic" aria-pressed="false" aria-label="Classic skin" title="Classic (charcoal)">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.8a6.2 6.2 0 1 0 0 12.4c1 0 1.5-.6 1.5-1.3 0-.9-.8-1.2-.8-2 0-.7.6-1.2 1.4-1.2h1.6a2.5 2.5 0 0 0 2.5-2.5C14.2 4.2 11.4 1.8 8 1.8z"/><circle cx="5" cy="7" r=".6"/><circle cx="7.2" cy="4.6" r=".6"/><circle cx="10.4" cy="5.2" r=".6"/></svg>
+      </button>
+    </div>
+    </div>
     <input type="file" id="fileInput" accept=".keystep2" hidden>
   </header>
 
@@ -301,6 +352,13 @@
     </aside>
 
     <main id="stage">
+      <div id="xfer" hidden>
+        <div><div class="what" id="xferTitle"></div><div class="big" id="xferBig"></div></div>
+        <div class="time"><strong id="xferLeft"></strong><span id="xferElapsed"></span></div>
+        <div class="track" id="xferTrack"></div>
+        <div class="foot"><div class="banks" id="xferBanks"><span>Bank 1</span><span>Bank 2</span><span>Bank 3</span><span>Bank 4</span></div>
+          <span id="xferNote"></span><button id="xferCancel">Cancel</button></div>
+      </div>
       <canvas id="roll" tabindex="0" aria-label="Piano roll"></canvas>
       <div id="drop">
         <span id="dropText">Drop a .keystep2 project here</span>
@@ -316,6 +374,11 @@
     </aside>
   </div>
 
+  <dialog id="confirmDlg">
+    <p id="confirmText"></p>
+    <form method="dialog"><button value="cancel">Cancel</button><button value="ok" id="confirmOk">OK</button></form>
+  </dialog>
+
   <footer class="statusbar">
     <span id="status" role="status" aria-live="polite"></span>
     <span id="where"></span>
@@ -324,6 +387,7 @@
 </div>
 
 <script src="keystep2.js"></script>
+<script src="keystep2-midi.js"></script>
 <script>
 'use strict';
 const $ = (id) => document.getElementById(id);
@@ -626,6 +690,7 @@ function renderChrome() {
   $('copyBtn').disabled = !file || isBlank(P);
   $('pasteBtn').disabled = !clipboard;
   $('clearBtn').disabled = !file || !steps.some((s) => s.length);
+  deviceButtons();
   if (!file) return;
   const count = steps.reduce((a, s) => a + s.length, 0);
   const picks = selection.size > 1 ? `, ${selection.size} selected` : '';
@@ -649,17 +714,29 @@ function slotPreview(p) {
   return `<svg viewBox="0 0 64 26" preserveAspectRatio="none" aria-hidden="true">${rects}</svg>`;
 }
 
+const NO_BLOB = new Uint8Array(4096).fill(0xff);
 function renderSlots() {
+  // During a full read the list shows the bank being read, filling in as patterns arrive.
+  const reading = !!(xfer && xfer.blobs);
+  renderSlotList(reading, reading ? xfer.bank : bank, reading ? xfer.number : number);
+}
+
+function renderSlotList(reading, bank, number) {
+  const source = (n) => {
+    if (!reading) return getPattern(bank, n);
+    const blob = (n === xfer.number && xfer.partial) || xfer.blobs.get(KS2.patternKey(bank, n)) || NO_BLOB;
+    return { blob, params: KS2.paramsFromBlob(blob) };
+  };
   $('banks').innerHTML = [1, 2, 3, 4].map((b) =>
-    `<button data-bank="${b}" aria-pressed="${b === bank}" title="Bank ${b}">${b}</button>`).join('');
+    `<button data-bank="${b}" aria-pressed="${b === bank}" title="Bank ${b}"${reading ? ' disabled' : ''}>${b}</button>`).join('');
   let html = '';
   for (let n = 1; n <= 16; n++) {
-    const p = getPattern(bank, n);
+    const p = source(n);
     if (!p) continue;
-    const blank = isBlank(p);
+    const blank = isBlank(p) || !KS2.readSteps(p.blob).some((notes) => notes.length);
     html += `<button class="slot${blank ? ' empty' : ''}" data-number="${n}" aria-pressed="${n === number}"
       aria-label="Pattern ${n}${blank ? ', empty' : ''}"><span class="num">${n}</span>${slotPreview(p)}
-      <span class="len" title="Length in steps">${blank ? '' : KS2.getParam(p, 'length')}</span></button>`;
+      <span class="len" title="Length in steps">${isBlank(p) ? '' : KS2.getParam(p, 'length')}</span></button>`;
   }
   $('slots').innerHTML = html;
 }
@@ -752,8 +829,14 @@ function lightKey(pitch, ms) {
 }
 
 function paint() {
+  if (xfer) renderXfer();
+  const live = !!(xfer && xfer.steps); // notes arriving from the device
+  paintRoll(live ? xfer.steps : steps, live);
+}
+
+function paintRoll(steps, live) {
   const dpr = window.devicePixelRatio || 1, W = canvas.clientWidth, H = canvas.clientHeight;
-  if (!file || !W || !H) return;
+  if ((!file && !live) || !W || !H) return;
   if (canvas.width !== Math.round(W * dpr) || canvas.height !== Math.round(H * dpr)) {
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
   }
@@ -764,7 +847,7 @@ function paint() {
     muted: c('--muted'), line: c('--line'), strong: c('--line-strong'), note: c('--note'), accent: c('--accent'),
     playhead: c('--playhead'), keyWhite: c('--key-white'), keyBlack: c('--key-black'), select: c('--select'),
     hover: c('--hover') };
-  const cw = view.colW, rh = view.rowH, len = patternLength(), GH = tall(), GB = RULER + GH, VT = velTop();
+  const cw = view.colW, rh = view.rowH, len = live ? 64 : patternLength(), GH = tall(), GB = RULER + GH, VT = velTop();
   const font = cs.getPropertyValue('--font');
   const now = performance.now();
   for (const [p, until] of lit) if (until <= now) lit.delete(p);
@@ -830,6 +913,26 @@ function paint() {
       ctx.beginPath(); ctx.roundRect(x - 1, y - 1, w + 2, h + 2, Math.min(3.5, h / 3 + 1)); ctx.stroke();
     }
   }));
+  if (live) {
+    // Each step's notes appear as its bytes arrive; the newest ones flash, a line marks the front.
+    const at = xfer.arrived;
+    steps.forEach((notes, s) => notes.forEach((o) => {
+      const fresh = 1 - (at - s) / 5;
+      if (fresh <= 0) return;
+      ctx.globalAlpha = fresh * 0.8; ctx.fillStyle = col.ink;
+      ctx.beginPath(); ctx.roundRect(xOf(s) + 1, yOf(o.n) + pad, Math.max(o.l / 2 * cw - 2, 4), rh - pad * 2, 2.5); ctx.fill();
+    }));
+    ctx.globalAlpha = 1;
+    if (at > 0 && at < 64) {
+      ctx.fillStyle = col.note; ctx.globalAlpha = 0.14; ctx.fillRect(xOf(at), RULER, cw * 3, GH);
+      ctx.globalAlpha = 1; ctx.fillRect(xOf(at), RULER, 2, GH);
+    }
+    const phase = at <= 0 ? 'Settings header' : at >= 64 ? (steps.some((n) => n.length) ? '' : 'Empty pattern') : (steps.some((n) => n.length) ? '' : 'Empty so far');
+    if (phase) {
+      ctx.fillStyle = col.muted; ctx.font = `500 15px ${cs.getPropertyValue('--font-label')}`; ctx.textAlign = 'center';
+      ctx.fillText(phase, KEYW + (W - KEYW) / 2, RULER + GH - 22); ctx.textAlign = 'left';
+    }
+  }
   if (box) {
     const x0 = xOf(Math.min(box.s0, box.s1)), x1 = xOf(Math.max(box.s0, box.s1));
     const y0 = RULER + (view.top - Math.max(box.p0, box.p1)) * rh, y1 = RULER + (view.top - Math.min(box.p0, box.p1)) * rh;
@@ -904,6 +1007,7 @@ function paint() {
     ctx.fillText(String(s + 1), xOf(s) + 3, RULER / 2);
   }
   ctx.fillStyle = col.ink;
+  if (live) ctx.globalAlpha = 0;
   ctx.fillRect(lx - 1, 0, 2, H);
   ctx.beginPath(); ctx.moveTo(lx, 0); ctx.lineTo(lx - 9, 0); ctx.lineTo(lx - 9, 7); ctx.lineTo(lx, 13); ctx.closePath(); ctx.fill();
   ctx.restore();
@@ -975,7 +1079,7 @@ function boxSelect(p) {
 }
 
 canvas.addEventListener('pointerdown', (e) => {
-  if (!file || e.button > 1) return;
+  if (!file || xfer || e.button > 1) return;
   canvas.focus({ preventScroll: true });
   const p = locate(e);
   drag = { mode: null, snapped: false, changed: false, x: p.x, y: p.y };
@@ -1017,7 +1121,7 @@ canvas.addEventListener('pointerdown', (e) => {
 });
 
 canvas.addEventListener('pointermove', (e) => {
-  if (!file) return;
+  if (!file || xfer) return;
   const p = locate(e);
   if (!drag) {
     const hit = p.zone === 'grid' ? noteAt(p) : null;
@@ -1077,7 +1181,7 @@ canvas.addEventListener('pointerleave', () => { if (hover) { hover = null; draw(
 canvas.addEventListener('mousedown', (e) => { if (e.button === 1) e.preventDefault(); }); // no autoscroll puck
 
 function removeAt(e) {
-  if (!file) return;
+  if (!file || xfer) return;
   const p = locate(e), hit = p.zone === 'grid' ? noteAt(p) : null;
   if (!hit) return;
   edit(() => removeNotes([hit.note]));
@@ -1087,7 +1191,7 @@ canvas.addEventListener('contextmenu', (e) => { e.preventDefault(); removeAt(e);
 
 // Scroll pans; Cmd/Ctrl+scroll (and trackpad pinch) zooms time, Alt+scroll zooms the keys, both about the pointer.
 canvas.addEventListener('wheel', (e) => {
-  if (!file) return;
+  if (!file || xfer) return;
   e.preventDefault();
   const p = locate(e), unit = e.deltaMode === 1 ? 16 : 1, dx = e.deltaX * unit, dy = e.deltaY * unit;
   const factor = Math.exp(-clamp(dy, -60, 60) * 0.012);
@@ -1111,6 +1215,7 @@ canvas.addEventListener('wheel', (e) => {
 
 // ---- keyboard ---------------------------------------------------------------
 document.addEventListener('keydown', (e) => {
+  if (document.querySelector('dialog[open]') || xfer) return;
   const mod = e.metaKey || e.ctrlKey, k = e.key.toLowerCase();
   if (mod && k === 'o') { e.preventDefault(); $('fileInput').click(); return; }
   if (!file) return;
@@ -1284,18 +1389,219 @@ addEventListener('beforeunload', (e) => { if (dirty) e.preventDefault(); });
 new ResizeObserver(draw).observe(canvas);
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw);
 
+// ---- device (Web MIDI) ----------------------------------------------------------
+let device = null, busy = false;
+let xfer = null; // the transfer in progress, shown in the header above the roll
+
+class Cancelled extends Error {}
+
+/** `parts` is how many segments the progress track has: 64 for a full read, 1 or 2 otherwise. */
+function beginXfer(title, parts, options = {}) {
+  xfer = { title, parts, part: 0, frac: 0, big: '', note: '', started: performance.now(), cancel: false, cancellable: options.cancellable !== false,
+    steps: null, arrived: 0, blobs: options.blobs || null, partial: null, bank, number, view: { ...view }, drawn: -1 };
+  $('xferTrack').innerHTML = '<i></i>'.repeat(parts);
+  $('xferTrack').classList.toggle('banked', parts === 64);
+  $('xferBanks').hidden = parts !== 64; $('xferNote').hidden = parts === 64;
+  $('xferCancel').hidden = !xfer.cancellable; $('xferCancel').disabled = false;
+  $('xfer').hidden = false; $('drop').hidden = true;
+  selection = new Set(); box = null; hover = null;
+  draw();
+}
+
+function endXfer() {
+  if (!xfer) return;
+  Object.assign(view, xfer.view);
+  xfer = null;
+  $('xfer').hidden = true; $('drop').hidden = !!file;
+}
+
+function renderXfer() {
+  const progress = (xfer.part + xfer.frac) / xfer.parts, elapsed = (performance.now() - xfer.started) / 1000;
+  const left = progress > 0.02 ? elapsed * (1 - progress) / progress : NaN;
+  $('xferTitle').textContent = xfer.title;
+  $('xferBig').innerHTML = xfer.big;
+  $('xferNote').textContent = xfer.note;
+  $('xferLeft').textContent = Number.isNaN(left) ? '' : left >= 60 ? `${Math.floor(left / 60)} min ${Math.round(left % 60)} s left` : `${Math.max(1, Math.ceil(left))} s left`;
+  $('xferElapsed').textContent = `${Math.round(elapsed)} s elapsed`;
+  [...$('xferTrack').children].forEach((el, i) => {
+    el.className = i < xfer.part ? 'done' : i === xfer.part ? 'now' : '';
+    if (i === xfer.part) el.style.setProperty('--w', (xfer.frac * 100).toFixed(0) + '%');
+  });
+}
+
+/** Progress callback for block transfers. With a partial blob, the roll shows its notes arriving. */
+function onBlocks(done, total, partial) {
+  if (xfer.cancel) throw new Cancelled();
+  xfer.frac = done / total;
+  if (partial) {
+    xfer.partial = partial;
+    xfer.arrived = clamp((done * 32 - KS2.STEPS_OFFSET) / KS2.RECORD_SIZE, 0, 64);
+    const whole = Math.floor(xfer.arrived);
+    if (whole !== xfer.drawn) {
+      xfer.drawn = whole;
+      xfer.steps = KS2.readSteps(partial).map((notes, s) => (s < whole ? notes : []));
+      // Keep every arrived note in view; zoom the keys out only as far as needed.
+      const pitches = xfer.steps.flat().map((o) => o.n);
+      if (pitches.length) {
+        const lo = Math.min(...pitches), hi = Math.max(...pitches);
+        if (hi >= view.top - 2 || lo < view.top - tall() / view.rowH + 2 || !xfer.fitted) {
+          view.rowH = clamp(tall() / (hi - lo + 13), 6, 14);
+          view.top = (hi + lo + 1) / 2 + tall() / view.rowH / 2;
+          xfer.fitted = true;
+        }
+      }
+      view.colW = 0; view.step0 = 0; clampView();
+      if (xfer.blobs && whole % 8 === 0) renderSlots();
+    }
+  }
+  draw();
+}
+
+function deviceButtons() {
+  $('midiBtn').textContent = device ? 'KeyStep' : 'Connect KeyStep';
+  $('midiBtn').title = device ? 'KeyStep mk2 connected over USB' : 'Connect to a KeyStep mk2 over USB (Chrome or Edge)';
+  $('midiBtn').setAttribute('aria-pressed', !!device);
+  $('readAllBtn').disabled = !device || busy;
+  $('readOneBtn').disabled = !device || busy || !file;
+  $('sendBtn').disabled = !device || busy || !file || isBlank(P);
+}
+
+function confirmAction(text, okLabel) {
+  return new Promise((resolve) => {
+    const dlg = $('confirmDlg');
+    $('confirmText').textContent = text; $('confirmOk').textContent = okLabel;
+    dlg.onclose = () => resolve(dlg.returnValue === 'ok');
+    dlg.returnValue = 'cancel';
+    dlg.showModal();
+  });
+}
+
+async function connectDevice() {
+  if (device) { say('KeyStep mk2 is connected.'); return; }
+  if (!navigator.requestMIDIAccess) { say('This browser has no Web MIDI. Use Chrome or Edge.', true); return; }
+  let access;
+  try {
+    access = await navigator.requestMIDIAccess({ sysex: true });
+  } catch (e) {
+    say('MIDI access was refused. Allow MIDI devices for this page and try again.', true); return;
+  }
+  const transport = KS2MIDI.webMidiTransport(access);
+  if (!transport) { say('No KeyStep mk2 found. Connect it by USB, then try again.', true); return; }
+  const candidate = new KS2MIDI.Device(transport);
+  if (!(await candidate.probe())) { say('The KeyStep does not answer. Close MIDI Control Center and try again.', true); return; }
+  device = candidate;
+  // The device computes the checksum itself, so every pattern it sends must satisfy it.
+  device.verify = (blob) => KS2.isEmpty(blob) || KS2.storedChecksum(blob) === (KS2.xorSum(blob) ^ KS2.CHECKSUM_BIAS);
+  access.onstatechange = () => {
+    if (device && ![...access.outputs.values()].some((port) => /keystep/i.test(port.name || '') && port.state === 'connected')) {
+      device = null; deviceButtons(); say('KeyStep disconnected.', true);
+    }
+  };
+  deviceButtons();
+  say(`Connected to ${transport.name}.`);
+}
+
+async function transfer(label, fn) {
+  if (busy || !device) return;
+  busy = true; deviceButtons();
+  try {
+    await fn();
+  } catch (e) {
+    if (e instanceof Cancelled) say(`${label} cancelled. Nothing here was changed.`);
+    else say(`${label} failed: ${e.message}`, true);
+  } finally {
+    endXfer();
+    busy = false;
+    if (file) renderAll(); else { $('slots').innerHTML = ''; $('banks').innerHTML = ''; deviceButtons(); }
+  }
+}
+
+async function readAllFromDevice() {
+  if (dirty && !(await confirmAction('Reading the device opens a new project and discards the unsaved edits here.', 'Read all'))) return;
+  await transfer('Reading', async () => {
+    stop();
+    const blobs = new Map();
+    beginXfer('Reading from KeyStep mk2', 64, { blobs });
+    for (let b = 1; b <= 4; b++) {
+      for (let n = 1; n <= 16; n++) {
+        Object.assign(xfer, { part: blobs.size, frac: 0, bank: b, number: n, partial: null, steps: Array.from({ length: 64 }, () => []), arrived: 0, drawn: -1, fitted: false });
+        xfer.big = `Pattern ${blobs.size + 1} <span>of 64</span>`;
+        $('status').textContent = `Reading bank ${b}, pattern ${n} from the KeyStep…`;
+        renderSlots();
+        blobs.set(KS2.patternKey(b, n), (await device.readPattern(b, n, onBlocks)).slice());
+      }
+    }
+    endXfer();
+    file = KS2.createProject(blobs); fileName = 'KeyStep mk2 device.keystep2'; dirty = false;
+    undoStack = []; redoStack = []; clipboard = null;
+    selectPattern(1, 1);
+    say('Read 64 patterns from the KeyStep.');
+  });
+}
+
+async function readOneFromDevice() {
+  await transfer('Reading', async () => {
+    stop();
+    beginXfer('Reading from KeyStep mk2', 1);
+    xfer.big = `Bank ${bank}, <span>pattern</span> ${number}`;
+    xfer.note = 'Replaces this slot in the editor. Undo brings the old one back.';
+    xfer.steps = Array.from({ length: 64 }, () => []);
+    $('status').textContent = `Reading bank ${bank}, pattern ${number} from the KeyStep…`;
+    const blob = (await device.readPattern(bank, number, onBlocks)).slice();
+    endXfer();
+    snapshot();
+    P.blob = blob; P.params = KS2.paramsFromBlob(blob);
+    P.bias = isBlank(P) ? KS2.CHECKSUM_BIAS : KS2.storedChecksum(blob) ^ KS2.xorSum(blob);
+    selectPattern(bank, number);
+    say(`Read bank ${bank}, pattern ${number} from the KeyStep.`);
+  });
+}
+
+async function sendToDevice() {
+  const b = bank, n = number, pattern = P;
+  if (!(await confirmAction(`Send bank ${b}, pattern ${n} to the KeyStep? It replaces that pattern on the device.`, 'Send'))) return;
+  await transfer('Sending', async () => {
+    stop();
+    const blob = pattern.blob.slice();
+    const params = KS2MIDI.PARAM_ORDER.map((id) => {
+      const def = KS2.PARAM_BY_ID.get(id);
+      return { id, raw: pattern.params[id] === undefined ? KS2.paramsFromBlob(blob)[id] : pattern.params[id], range: def.range };
+    });
+    // Two halves: write, then read back and compare. A write is not cancellable: half a pattern is worse than either.
+    beginXfer('Sending to KeyStep mk2', 2, { cancellable: false });
+    xfer.big = `Bank ${b}, <span>pattern</span> ${n}`;
+    xfer.note = 'Writing. Keep the KeyStep connected.';
+    $('status').textContent = `Sending bank ${b}, pattern ${n} to the KeyStep…`;
+    await device.writePattern(b, n, blob, params, (done, total) => onBlocks(done, total));
+    xfer.part = 1; xfer.frac = 0; xfer.note = 'Reading it back to compare.';
+    const back = await device.readPattern(b, n, (done, total) => onBlocks(done, total));
+    for (let i = KS2.STEPS_OFFSET; i < KS2.STEPS_END; i++) if (back[i] !== blob[i]) throw new Error('the device holds different notes than were sent');
+    const want = KS2.paramsFromBlob(blob), got = KS2.paramsFromBlob(back);
+    for (const id of KS2MIDI.PARAM_ORDER) if (want[id] !== got[id]) throw new Error(`the device holds a different ${KS2.PARAM_BY_ID.get(id).label.toLowerCase()} than was sent`);
+    endXfer();
+    say(`Sent bank ${b}, pattern ${n} and read it back: it matches.`);
+  });
+}
+
+$('xferCancel').onclick = () => { if (xfer && xfer.cancellable) { xfer.cancel = true; $('xferCancel').disabled = true; } };
+$('midiBtn').onclick = connectDevice;
+$('readAllBtn').onclick = readAllFromDevice;
+$('readOneBtn').onclick = readOneFromDevice;
+$('sendBtn').onclick = sendToDevice;
+
 // ---- skin ---------------------------------------------------------------------
 function setSkin(name) {
-  const known = [...$('skinSelect').options].some((o) => o.value === name);
-  document.documentElement.dataset.skin = known ? name : 'keystep';
-  $('skinSelect').value = document.documentElement.dataset.skin;
+  const buttons = [...$('skins').querySelectorAll('[data-skin]')];
+  const known = buttons.some((b) => b.dataset.skin === name);
+  document.documentElement.dataset.skin = known ? name : 'light';
+  for (const b of buttons) b.setAttribute('aria-pressed', b.dataset.skin === document.documentElement.dataset.skin);
   try { localStorage.setItem('ks2-skin', document.documentElement.dataset.skin); } catch (e) { /* storage unavailable */ }
   draw();
 }
-$('skinSelect').onchange = (e) => setSkin(e.target.value);
+$('skins').onclick = (e) => { const b = e.target.closest('[data-skin]'); if (b) setSkin(b.dataset.skin); };
 let savedSkin = null;
 try { savedSkin = localStorage.getItem('ks2-skin'); } catch (e) { /* storage unavailable */ }
-setSkin(savedSkin || 'keystep');
+setSkin(savedSkin || 'light');
 document.fonts && document.fonts.ready.then(draw);
 
 // Served over http next to an export: open it straight away.

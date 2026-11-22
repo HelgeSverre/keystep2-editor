@@ -270,13 +270,52 @@
     return out;
   }
 
+  /** Text parameters as the header words of a blob imply them: { id: stored value }. */
+  function paramsFromBlob(blob) {
+    const params = {};
+    for (const def of PARAMS) {
+      params[def.id] = isEmpty(blob)
+        ? DEFAULT_RAW[def.id] || 0
+        : Math.max(0, Math.min(def.range, Math.round(word(blob, def.offset) * def.range / 32767)));
+    }
+    return params;
+  }
+
+  /**
+   * A project in MIDI Control Center's file layout, built from pattern blobs.
+   * `blobs` maps "bank_number" to 4096 bytes; missing slots are empty. `params` optionally maps the
+   * same keys to { id: stored value }; otherwise the values come from each blob's header.
+   */
+  function createProject(blobs, params, version = '1.0.2') {
+    const keys = [];
+    for (let bank = 1; bank <= 4; bank++) for (let n = 1; n <= 16; n++) keys.push(patternKey(bank, n));
+    keys.sort((a, b) => (a + '_' < b + '_' ? -1 : 1)); // MCC orders the full key as text: 1_10 … 1_16, 1_1 … 1_9
+    const ids = PARAMS.map((d) => String(d.id)).sort();
+    const empty = new Uint8Array(BLOB_SIZE).fill(0xff);
+    const blobOf = (key) => (blobs.get ? blobs.get(key) : blobs[key]) || empty;
+    let head = `{\n\t"device": "KeyStep mk2",\n\t"version": "${version}",\n`;
+    for (const key of keys) {
+      const own = (params && (params.get ? params.get(key) : params[key])) || paramsFromBlob(blobOf(key));
+      for (const id of ids) head += `\t"${key}_${id}": ${own[id] === undefined ? DEFAULT_RAW[id] || 0 : own[id]},\n`;
+    }
+    head += '\t"BINARY_FILE_SECTION": "WARNING: Binary File section MUST be the LAST section",\n';
+    const parts = [bytesOf(head)];
+    keys.forEach((key, i) => {
+      parts.push(bytesOf(`\t"BINARY_FILE_${key}_49152": "`), blobOf(key), bytesOf(i === keys.length - 1 ? '",\n}' : '",\n'));
+    });
+    const out = new Uint8Array(parts.reduce((n, part) => n + part.length, 0));
+    let at = 0;
+    for (const part of parts) { out.set(part, at); at += part.length; }
+    return parse(out);
+  }
+
   return {
     NOTE_NAMES, PARAMS, PARAM_BY_ID, PARAM_BY_KEY,
     BLOB_SIZE, STEP_COUNT, SLOT_COUNT, RECORD_SIZE, STEPS_OFFSET, STEPS_END, CHECKSUM_OFFSET, DATA_END,
     CHECKSUM_BIAS, MAX_NOTE_LENGTH,
     noteName, word, patternKey,
     getParam, setParam, formatParam, normWord,
-    isEmpty, xorSum, storedChecksum, updateChecksum, readSteps, writeStep, initBlob,
+    isEmpty, xorSum, storedChecksum, updateChecksum, readSteps, writeStep, initBlob, paramsFromBlob, createProject,
     parse, serialize,
   };
 });
