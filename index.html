@@ -5,7 +5,89 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>KeyStep mk2 pattern editor</title>
 <style>
-  :root {
+  @font-face { font-family: "Inter"; font-weight: 400 700; font-display: swap; src: url(fonts/inter-400-700.woff2) format("woff2"); }
+  @font-face { font-family: "Barlow Semi Condensed"; font-weight: 500; font-display: swap; src: url(fonts/barlow-semi-condensed-500.woff2) format("woff2"); }
+  @font-face { font-family: "Barlow Semi Condensed"; font-weight: 600; font-display: swap; src: url(fonts/barlow-semi-condensed-600.woff2) format("woff2"); }
+
+  /*
+   * Skins. A skin is a block of custom properties on :root[data-skin="…"]; components read only
+   * these tokens, and the piano roll reads them from the root at draw time. To add a skin, copy a
+   * block, change the values and add an <option> to #skinSelect.
+   *
+   *   --bg            window background, and the wash over steps past the pattern length
+   *   --panel         toolbar, side panes, ruler, velocity lane
+   *   --surface       input fields; white-key rows of the roll
+   *   --sunken        pressed buttons; black-key rows of the roll
+   *   --ink / --muted primary and secondary text
+   *   --label         pane headings and units (the device's secondary-function lettering)
+   *   --line / --line-strong   hairlines; beat lines and hover outlines
+   *   --btn-bg / --btn-edge    button face and outline
+   *   --select / --on-select   pressed and selected state (the device's Shift button)
+   *   --note          notes and velocity bars
+   *   --accent        selected note, focus ring, warnings
+   *   --playhead      playing step
+   *   --hover         wash over the key lane under the pointer
+   *   --key-white / --key-black   keyboard strip beside the roll
+   *   --display-bg / --display-ink   file readout (the device's OLED)
+   *   --radius        corner radius of buttons and fields
+   *   --font / --font-label / --mono   text, button and heading lettering, hex
+   *   --label-case / --label-track     heading capitalisation and tracking
+   */
+  :root, :root[data-skin="keystep"] {
+    color-scheme: light;
+    --bg: #d6d6da;
+    --panel: #e5e5e7;
+    --surface: #f4f4f6;
+    --sunken: #d9d9dd;
+    --ink: #1e1e20;
+    --muted: #63636b;
+    --label: #046a99;
+    --line: #c9c8cc;
+    --line-strong: #a9a7ab;
+    --btn-bg: #eeeef0;
+    --btn-edge: #b4b2b5;
+    --select: #0580b8;
+    --on-select: #ffffff;
+    --note: #0580b8;
+    --accent: #1e1e20;
+    --playhead: #0580b8;
+    --hover: rgba(255, 255, 255, 0.6);
+    --key-white: #f6f5f8;
+    --key-black: #141415;
+    --display-bg: #1b1a1b;
+    --display-ink: #b4e6f1;
+    --radius: 4px;
+    --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --font-label: "Barlow Semi Condensed", "Avenir Next Condensed", "Arial Narrow", "Inter", system-ui, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --label-case: none;
+    --label-track: 0.01em;
+  }
+  :root[data-skin="keystep-dark"] {
+    color-scheme: dark;
+    --bg: #101012;
+    --panel: #1b1b1e;
+    --surface: #242428;
+    --sunken: #151517;
+    --ink: #ececee;
+    --muted: #9a9aa3;
+    --label: #56b9e3;
+    --line: #333338;
+    --line-strong: #55555d;
+    --btn-bg: #27272b;
+    --btn-edge: #4b4b53;
+    --select: #0a8fcc;
+    --on-select: #ffffff;
+    --note: #35a7de;
+    --accent: #ffffff;
+    --playhead: #35a7de;
+    --hover: rgba(255, 255, 255, 0.07);
+    --key-white: #d9d9de;
+    --key-black: #070708;
+    --display-bg: #000000;
+    --display-ink: #b4e6f1;
+  }
+  :root[data-skin="classic"] {
     color-scheme: light dark;
     --bg: #e4e7eb;
     --panel: #eef0f3;
@@ -13,29 +95,46 @@
     --sunken: #dde1e6;
     --ink: #161a20;
     --muted: #5f6772;
+    --label: #5f6772;
     --line: #c6ccd4;
     --line-strong: #a3abb6;
-    --note: #2b3bc4;
-    --accent: #d9481f;
+    --btn-bg: #f8f9fa;
+    --btn-edge: #c6ccd4;
     --select: #2b3bc4;
     --on-select: #ffffff;
+    --note: #2b3bc4;
+    --accent: #d9481f;
+    --playhead: #d9481f;
+    --hover: rgba(255, 255, 255, 0.7);
+    --key-white: #f8f9fa;
+    --key-black: #3a3f47;
+    --display-bg: transparent;
+    --display-ink: #161a20;
+    --radius: 5px;
     --font: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
-    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --font-label: var(--font);
   }
   @media (prefers-color-scheme: dark) {
-    :root {
+    :root[data-skin="classic"] {
       --bg: #17191d;
       --panel: #1f2226;
       --surface: #272b31;
       --sunken: #1a1c20;
       --ink: #e6e8eb;
       --muted: #969da8;
+      --label: #969da8;
       --line: #34393f;
       --line-strong: #525963;
+      --btn-bg: #272b31;
+      --btn-edge: #34393f;
+      --select: #4a59d6;
       --note: #93a0ff;
       --accent: #ff7d4f;
-      --select: #4a59d6;
-      --on-select: #ffffff;
+      --playhead: #ff7d4f;
+      --hover: rgba(255, 255, 255, 0.07);
+      --key-white: #c9cdd3;
+      --key-black: #101214;
+      --display-ink: #e6e8eb;
     }
   }
 
@@ -53,8 +152,9 @@
 
   button, input, select { font: inherit; color: inherit; }
   button {
-    background: var(--surface); border: 1px solid var(--line); border-radius: 5px;
+    background: var(--btn-bg); border: 1px solid var(--btn-edge); border-radius: var(--radius);
     padding: 3px 10px; height: 26px; white-space: nowrap;
+    font-family: var(--font-label); font-weight: 500; font-size: 13px; letter-spacing: var(--label-track);
   }
   button:hover:not(:disabled) { border-color: var(--line-strong); }
   button:active:not(:disabled) { background: var(--sunken); }
@@ -62,7 +162,7 @@
   button[aria-pressed="true"] { background: var(--select); color: var(--on-select); border-color: var(--select); }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   input, select {
-    background: var(--surface); border: 1px solid var(--line); border-radius: 4px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
     height: 24px; padding: 1px 6px; user-select: text; -webkit-user-select: text;
   }
 
@@ -72,25 +172,35 @@
     background: var(--panel); border-bottom: 1px solid var(--line);
   }
   .toolbar .sep { width: 1px; height: 18px; background: var(--line); margin: 0 4px; }
-  .toolbar .doc { margin-left: auto; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .toolbar .doc b { color: var(--ink); font-weight: 600; }
-  .toolbar .doc .dirty { color: var(--accent); }
+  .toolbar .wordmark { font-family: var(--font-label); font-size: 17px; font-weight: 500; letter-spacing: 0.02em; margin-right: 8px; white-space: nowrap; }
+  .toolbar .wordmark { color: var(--muted); }
+  .toolbar .wordmark b { font-weight: 600; color: var(--ink); }
+  .toolbar .wordmark span { color: var(--label); font-size: 13px; margin-left: 5px; }
+  .toolbar .doc {
+    margin-left: auto; padding: 0 10px; height: 24px; line-height: 24px; border-radius: var(--radius);
+    background: var(--display-bg); color: var(--display-ink); font-size: 12px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .toolbar .doc:empty { display: none; }
+  .toolbar .doc b { font-weight: 600; }
+  .toolbar .doc .dirty { opacity: 0.7; }
+  .toolbar select { height: 26px; border-color: var(--btn-edge); background: var(--btn-bg); font-family: var(--font-label); font-size: 13px; }
   #playBtn { min-width: 64px; font-weight: 600; }
 
   /* Workspace */
   #work { display: grid; grid-template-columns: 208px minmax(0, 1fr) 272px; min-height: 0; }
   .pane { background: var(--panel); min-height: 0; display: flex; flex-direction: column; }
   .pane h2 {
-    font-size: 11.5px; font-weight: 600; color: var(--muted); margin: 0;
-    padding: 8px 10px 6px;
+    font-family: var(--font-label); font-size: 13px; font-weight: 500; color: var(--label); margin: 0;
+    padding: 8px 10px 6px; text-transform: var(--label-case); letter-spacing: var(--label-track);
   }
 
   /* Patterns pane */
   #patterns { border-right: 1px solid var(--line); }
   .banks { display: grid; grid-template-columns: repeat(4, 1fr); padding: 0 10px 8px; }
   .banks button { border-radius: 0; margin-left: -1px; padding: 0; }
-  .banks button:first-child { border-radius: 5px 0 0 5px; margin-left: 0; }
-  .banks button:last-child { border-radius: 0 5px 5px 0; }
+  .banks button:first-child { border-radius: var(--radius) 0 0 var(--radius); margin-left: 0; }
+  .banks button:last-child { border-radius: 0 var(--radius) var(--radius) 0; }
   .banks button[aria-pressed="true"] { position: relative; }
   #slots { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-auto-rows: minmax(26px, 1fr); border-top: 1px solid var(--line); }
   .slot {
@@ -101,8 +211,10 @@
   .slot:hover:not([aria-pressed="true"]) { background: var(--surface); }
   .slot svg { width: 100%; height: 100%; max-height: 30px; min-height: 14px; display: block; }
   .slot svg rect { fill: var(--note); }
+  .slot { font-family: var(--font); font-size: 12.5px; letter-spacing: 0; }
   .slot .num { font-weight: 600; text-align: right; }
-  .slot .len { color: var(--muted); font-size: 11px; text-align: right; }
+  .slot .len { color: var(--label); font-size: 11px; text-align: right; }
+  .slot[aria-pressed="true"] { background: var(--select); color: var(--on-select); }
   .slot.empty .num { color: var(--muted); font-weight: 400; }
   .slot[aria-pressed="true"] svg rect { fill: var(--on-select); }
   .slot[aria-pressed="true"] .len { color: var(--on-select); opacity: 0.8; }
@@ -110,8 +222,8 @@
   .slot-actions button { padding: 0; }
 
   /* Roll */
-  #stage { position: relative; min-width: 0; min-height: 0; overflow-x: auto; overflow-y: hidden; background: var(--surface); }
-  canvas#roll { display: block; width: 100%; min-width: 760px; height: 100%; touch-action: none; cursor: crosshair; outline: none; }
+  #stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: var(--surface); }
+  canvas#roll { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; outline: none; }
   #drop {
     position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px;
     color: var(--muted); font-size: 14px; background: var(--surface);
@@ -125,11 +237,12 @@
   .rows label { color: var(--muted); }
   .rows input, .rows select { width: 100%; }
   .rows .with-unit { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 6px; align-items: center; }
-  .rows .unit { color: var(--muted); font-size: 11.5px; white-space: nowrap; }
+  .rows .unit { color: var(--label); font-size: 11.5px; white-space: nowrap; }
   .empty-note { color: var(--muted); padding: 0 10px 2px; }
   .group .wide { margin: 8px 10px 0; width: calc(100% - 20px); }
+  .group .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 8px 10px 0; }
 
-  details#raw summary { font-size: 11.5px; font-weight: 600; color: var(--muted); padding: 8px 10px; }
+  details#raw summary { font-family: var(--font-label); font-size: 13px; font-weight: 500; color: var(--label); padding: 8px 10px; }
   #rawBody { padding: 0 10px 12px; user-select: text; -webkit-user-select: text; }
   #rawBody h3 { font-size: 11.5px; font-weight: 600; margin: 10px 0 4px; }
   #rawBody h3:first-child { margin-top: 0; }
@@ -156,6 +269,7 @@
 <body>
 <div id="shell">
   <header class="toolbar">
+    <span class="wordmark">KEY<b>STEP</b><span>mk2 editor</span></span>
     <button id="openBtn" title="Open a .keystep2 project">Open…</button>
     <button id="saveBtn" disabled title="Save a copy (Cmd/Ctrl+S). The opened file is not overwritten.">Save a copy…</button>
     <span class="sep"></span>
@@ -164,7 +278,13 @@
     <span class="sep"></span>
     <button id="playBtn" aria-pressed="false" disabled title="Play or stop (Space)">Play</button>
     <button id="soundBtn" aria-pressed="true" title="Play notes as you add or move them">Audition</button>
+    <button id="fitBtn" disabled title="Show the whole pattern (F)">Fit</button>
     <span class="doc" id="fileLabel"></span>
+    <select id="skinSelect" aria-label="Skin" title="Skin">
+      <option value="keystep">KeyStep</option>
+      <option value="keystep-dark">KeyStep Dark</option>
+      <option value="classic">Classic</option>
+    </select>
     <input type="file" id="fileInput" accept=".keystep2" hidden>
   </header>
 
@@ -189,7 +309,8 @@
     </main>
 
     <aside class="pane" id="inspector" aria-label="Inspector">
-      <section class="group"><h2>Pattern</h2><div class="rows" id="settings"></div></section>
+      <section class="group"><h2>Pattern</h2><div class="rows" id="settings"></div>
+        <button class="wide" id="doubleBtn" disabled>Double pattern</button></section>
       <section class="group"><h2>Note</h2><div id="noteBox"></div></section>
       <details id="raw"><summary>Raw bytes</summary><div id="rawBody"></div></details>
     </aside>
@@ -211,22 +332,61 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 
 // ---- state -----------------------------------------------------------------
 let file = null, fileName = '', dirty = false;
-let bank = 1, number = 1, P = null, steps = [];
-let sel = null;            // { step, note }
-let topPitch = 84;         // highest visible pitch
+let bank = 1, number = 1, P = null;
+let steps = [];                 // 64 arrays of notes { n, v, l, x, s }; s = step index, kept by this file only
+let selection = new Set();      // selected notes
 let undoStack = [], redoStack = [], clipboard = null;
 let lastVel = 100, lastLen = 2;
 let soundOn = true;
+let hover = null;               // { zone, pitch }
+let box = null;                 // selection rectangle { s0, p0, s1, p1 } in step and pitch units
+let heldKey = -1;               // key pressed on the keyboard strip
+const lit = new Map();          // pitch -> time (ms) until which its key shows as sounding
 
-// ---- geometry: the roll fills the stage -------------------------------------
-const KEYW = 44, RULER = 20, ROWH = 14, VGAP = 8, VELH = 76;
+// ---- view: continuous pan and zoom -------------------------------------------
+// step0 = step at the left edge, colW = pixels per step, top = pitch edge at the top (128 = above G9),
+// rowH = pixels per key.
+const KEYW = 52, RULER = 20, VGAP = 8, VELH = 76;
+const view = { step0: 0, colW: 0, top: 84, rowH: 14 };
 const canvas = $('roll'), ctx = canvas.getContext('2d');
-const colW = () => (canvas.clientWidth - KEYW) / 64;
-const rows = () => clamp(Math.floor((canvas.clientHeight - RULER - VGAP - VELH) / ROWH), 4, 128);
-const gridBottom = () => RULER + rows() * ROWH;
-const velTop = () => canvas.clientHeight - VELH;
-const clampTop = (p) => clamp(p, rows() - 1, 127);
 const BLACK = [0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0];
+const wide = () => Math.max(1, canvas.clientWidth - KEYW);
+const tall = () => Math.max(1, canvas.clientHeight - RULER - VGAP - VELH);
+const velTop = () => canvas.clientHeight - VELH;
+const xOf = (step) => KEYW + (step - view.step0) * view.colW;
+const yOf = (pitch) => RULER + (view.top - 1 - pitch) * view.rowH;
+const stepAt = (x) => view.step0 + (x - KEYW) / view.colW;
+const pitchAt = (y) => Math.ceil(view.top - (y - RULER) / view.rowH) - 1;
+
+function clampView() {
+  const w = wide(), h = tall();
+  view.colW = clamp(view.colW || 0, w / 64, 72);
+  view.step0 = clamp(view.step0, 0, 64 - w / view.colW);
+  view.rowH = clamp(view.rowH, Math.max(5, h / 128), 30);
+  view.top = clamp(view.top, h / view.rowH, 128);
+}
+
+/** Centres the keys on the pattern's notes; keeps the zoom. */
+function centreKeys() {
+  const pitches = steps.flat().map((o) => o.n);
+  const mid = pitches.length ? (Math.min(...pitches) + Math.max(...pitches) + 1) / 2 : 60;
+  view.top = mid + tall() / view.rowH / 2;
+  clampView();
+}
+
+/** Whole pattern in view at the default key height. */
+function fitAll() {
+  view.colW = 0; view.step0 = 0; view.rowH = 14;
+  clampView(); centreKeys(); draw();
+}
+
+function reveal(note) {
+  if (note.n >= view.top - 1) view.top = note.n + 2;
+  if (note.n < view.top - tall() / view.rowH + 1) view.top = note.n - 1 + tall() / view.rowH;
+  if (note.s < view.step0) view.step0 = note.s;
+  if (note.s + 1 > view.step0 + wide() / view.colW) view.step0 = note.s + 1 - wide() / view.colW;
+  clampView();
+}
 
 // ---- file ------------------------------------------------------------------
 async function openFile(f) {
@@ -276,22 +436,19 @@ async function saveCopy() {
 // ---- pattern selection and edits -------------------------------------------
 const getPattern = (b, n) => file.patterns.get(KS2.patternKey(b, n));
 const isBlank = (p) => KS2.isEmpty(p.blob);
+const patternLength = () => KS2.getParam(P, 'length');
 
 function loadSteps() {
   steps = isBlank(P) ? Array.from({ length: 64 }, () => []) : KS2.readSteps(P.blob);
+  steps.forEach((notes, s) => notes.forEach((o) => { o.s = s; }));
 }
 
 function selectPattern(b, n, keepView) {
-  bank = b; number = n; P = getPattern(b, n); sel = null;
+  bank = b; number = n; P = getPattern(b, n); selection = new Set(); box = null;
   loadSteps();
-  if (!keepView) fitView();
+  clampView();
+  if (!keepView) centreKeys();
   renderAll();
-}
-
-function fitView() {
-  const pitches = steps.flat().map((o) => o.n);
-  const mid = pitches.length ? (Math.min(...pitches) + Math.max(...pitches)) / 2 : 60;
-  topPitch = clampTop(Math.round(mid + rows() / 2));
 }
 
 function snapshot() {
@@ -310,6 +467,16 @@ function restore(from, to) {
   selectPattern(s.bank, s.number, s.bank === bank && s.number === number);
 }
 
+/** Runs an edit as one undo step; the snapshot is dropped again if the edit changed nothing. */
+function edit(fn) {
+  const redo = redoStack, wasDirty = dirty;
+  snapshot();
+  const changed = fn();
+  if (!changed) { undoStack.pop(); redoStack = redo; dirty = wasDirty; }
+  renderAll();
+  return changed;
+}
+
 /** Turns an empty slot into a blank pattern the first time something is written to it. */
 function ensureData() {
   if (isBlank(P)) { P.blob = KS2.initBlob(P.params); P.bias = KS2.CHECKSUM_BIAS; P.checksumOk = true; }
@@ -317,66 +484,130 @@ function ensureData() {
 
 function commit(indices) {
   ensureData();
-  for (const i of new Set(indices)) KS2.writeStep(P.blob, i, steps[i]);
+  for (const i of new Set(indices)) if (i >= 0 && i < 64) KS2.writeStep(P.blob, i, steps[i]);
   KS2.updateChecksum(P);
 }
 
-function addNote(step, pitch) {
-  if (steps[step].length >= KS2.SLOT_COUNT) { say('A step holds at most 8 notes.', true); return null; }
-  const note = { n: pitch, v: lastVel, l: lastLen, x: 0 };
-  steps[step].push(note);
-  commit([step]);
-  return note;
-}
+const FULL = 'A step holds at most 8 notes.';
 
-function moveNote(s, toStep, toPitch) {
-  const { step, note } = s;
-  if (toStep < 0 || toStep > 63 || toPitch < 0 || toPitch > 127) return false;
-  if (toStep === step && toPitch === note.n) return false;
-  const dst = steps[toStep];
-  if (dst.some((o) => o !== note && o.n === toPitch)) return false;
-  if (toStep !== step) {
-    if (dst.length >= KS2.SLOT_COUNT) { say('A step holds at most 8 notes.', true); return false; }
-    steps[step].splice(steps[step].indexOf(note), 1);
-    dst.push(note);
+/**
+ * Moves notes to new places, all or none. `targets` is [{ note, s, n }]; a note not yet in the
+ * pattern (a copy) is added. Returns false when a place is out of range, taken, or the step is full.
+ */
+function place(targets) {
+  const moving = new Set(targets.map((t) => t.note)), seen = new Set(), incoming = new Map();
+  for (const t of targets) {
+    if (t.s < 0 || t.s > 63 || t.n < 0 || t.n > 127) return false;
+    const key = t.s * 128 + t.n;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    incoming.set(t.s, (incoming.get(t.s) || 0) + 1);
+    if (steps[t.s].some((o) => !moving.has(o) && o.n === t.n)) return false;
   }
-  const pitchChanged = note.n !== toPitch;
-  note.n = toPitch; s.step = toStep;
-  commit([step, toStep]);
-  if (pitchChanged) audition(note);
+  for (const [s, count] of incoming) {
+    if (steps[s].filter((o) => !moving.has(o)).length + count > KS2.SLOT_COUNT) { say(FULL, true); return false; }
+  }
+  const touched = [];
+  for (const t of targets) {
+    const at = steps[t.note.s] ? steps[t.note.s].indexOf(t.note) : -1;
+    if (at >= 0) { steps[t.note.s].splice(at, 1); touched.push(t.note.s); }
+  }
+  for (const t of targets) { t.note.s = t.s; t.note.n = t.n; steps[t.s].push(t.note); touched.push(t.s); }
+  commit(touched);
   return true;
 }
 
-function deleteNote(s) {
-  steps[s.step].splice(steps[s.step].indexOf(s.note), 1);
-  commit([s.step]);
-  if (sel && sel.note === s.note) sel = null;
+function addNote(step, pitch) {
+  const note = { n: pitch, v: lastVel, l: lastLen, x: 0, s: -1 };
+  return place([{ note, s: step, n: pitch }]) ? note : null;
+}
+
+function removeNotes(notes) {
+  const touched = [];
+  for (const o of notes) {
+    const at = steps[o.s].indexOf(o);
+    if (at >= 0) { steps[o.s].splice(at, 1); touched.push(o.s); }
+    selection.delete(o);
+  }
+  if (touched.length) commit(touched);
+  return touched.length > 0;
+}
+
+const picked = () => [...selection];
+const single = () => (selection.size === 1 ? picked()[0] : null);
+
+function moveSelection(dS, dP) {
+  return place(picked().map((o) => ({ note: o, s: o.s + dS, n: o.n + dP })));
+}
+
+function stretchSelection(by) {
+  let changed = false;
+  for (const o of selection) {
+    const l = clamp(o.l + by, 1, KS2.MAX_NOTE_LENGTH);
+    if (l !== o.l) { o.l = l; changed = true; }
+  }
+  if (changed) { commit(picked().map((o) => o.s)); lastLen = picked()[0].l; }
+  return changed;
+}
+
+/** The selected notes once more, right after themselves. */
+function duplicateSelection() {
+  if (!selection.size) { say('Select notes to duplicate.'); return; }
+  const notes = picked();
+  const from = Math.min(...notes.map((o) => o.s)), to = Math.max(...notes.map((o) => o.s + o.l / 2));
+  const by = Math.max(1, Math.ceil(to - from - 1e-9));
+  const copies = notes.map((o) => ({ note: { n: o.n, v: o.v, l: o.l, x: o.x, s: -1 }, s: o.s + by, n: o.n }));
+  const ok = edit(() => place(copies));
+  if (!ok) { say('No room to duplicate: the copies would overlap notes or pass step 64.', true); return; }
+  selection = new Set(copies.map((c) => c.note));
+  reveal(copies[0].note);
+  renderAll();
+}
+
+/** Repeats steps 1..length after the end and doubles the length. */
+function doublePattern() {
+  const len = patternLength();
+  if (isBlank(P)) return;
+  if (len * 2 > 64) { say(`A pattern holds 64 steps; ${len} cannot be doubled.`, true); return; }
+  edit(() => {
+    for (let s = len; s < len * 2; s++) steps[s] = steps[s - len].map((o) => ({ n: o.n, v: o.v, l: o.l, x: o.x, s }));
+    commit(Array.from({ length: len }, (_, i) => len + i));
+    KS2.setParam(P, 'length', len * 2);
+    return true;
+  });
+  selection = new Set();
+  say(`Steps 1 to ${len} repeated as ${len + 1} to ${len * 2}.`);
+  renderAll();
 }
 
 function setNoteField(field, value) {
-  if (!sel) return;
-  const before = undoStack.length;
-  snapshot();
-  let ok = true;
-  if (field === 'n') ok = moveNote(sel, sel.step, clamp(value, 0, 127));
-  else if (field === 's') ok = moveNote(sel, clamp(value - 1, 0, 63), sel.note.n);
-  else {
-    sel.note[field] = field === 'v' ? clamp(value, 1, 127) : clamp(value, 1, KS2.MAX_NOTE_LENGTH);
-    if (field === 'v') lastVel = sel.note.v; else lastLen = sel.note.l;
-    commit([sel.step]);
-  }
-  if (!ok) undoStack.length = before;
-  renderAll();
+  const o = single();
+  if (!o) return;
+  edit(() => {
+    if (field === 'n') return place([{ note: o, s: o.s, n: clamp(value, 0, 127) }]);
+    if (field === 's') return place([{ note: o, s: clamp(value - 1, 0, 63), n: o.n }]);
+    o[field] = field === 'v' ? clamp(value, 1, 127) : clamp(value, 1, KS2.MAX_NOTE_LENGTH);
+    if (field === 'v') lastVel = o.v; else lastLen = o.l;
+    commit([o.s]);
+    return true;
+  });
+}
+
+function setGroupField(field, value) {
+  edit(() => {
+    for (const o of selection) o[field] = field === 'v' ? clamp(value, 1, 127) : clamp(value, 1, KS2.MAX_NOTE_LENGTH);
+    commit(picked().map((o) => o.s));
+    return true;
+  });
 }
 
 function setParam(key, value) {
-  snapshot();
-  KS2.setParam(P, key, value);
-  renderAll();
+  edit(() => { KS2.setParam(P, key, value); return true; });
 }
 
 // ---- rendering: chrome -----------------------------------------------------
-const HINT = 'Click: add note.  Drag: move.  Drag right edge: length.  Double-click: delete.  Wheel: scroll pitch.  Ruler marker: pattern length.';
+const MOD = /Mac|iPhone|iPad/.test(navigator.platform) ? 'Cmd' : 'Ctrl';
+const HINT = `Click: add.  Shift+drag: select.  Alt+drag: copy.  ${MOD}+D: duplicate.  Scroll: pan.  ${MOD}+scroll: zoom time.  Alt+scroll: zoom keys.  F: fit.`;
 let sayTimer = 0;
 function say(text, alert) {
   $('status').textContent = text || (file ? HINT : '');
@@ -391,13 +622,14 @@ function renderChrome() {
   $('fileLabel').innerHTML = file ? `<b>${esc(fileName)}</b>${dirty ? ' <span class="dirty">edited</span>' : ''}` : '';
   $('undoBtn').disabled = !undoStack.length;
   $('redoBtn').disabled = !redoStack.length;
-  $('saveBtn').disabled = $('playBtn').disabled = !file;
+  $('saveBtn').disabled = $('playBtn').disabled = $('fitBtn').disabled = !file;
   $('copyBtn').disabled = !file || isBlank(P);
   $('pasteBtn').disabled = !clipboard;
   $('clearBtn').disabled = !file || !steps.some((s) => s.length);
   if (!file) return;
   const count = steps.reduce((a, s) => a + s.length, 0);
-  $('where').textContent = `Bank ${bank}, pattern ${number}: ${isBlank(P) ? 'empty slot' : count + ' notes'}`;
+  const picks = selection.size > 1 ? `, ${selection.size} selected` : '';
+  $('where').textContent = `Bank ${bank}, pattern ${number}: ${isBlank(P) ? 'empty slot' : count + ' notes' + picks}`;
   const ok = isBlank(P) || KS2.storedChecksum(P.blob) === (KS2.xorSum(P.blob) ^ KS2.CHECKSUM_BIAS);
   $('checksum').textContent = isBlank(P) ? '' : ok ? 'Checksum OK' : 'Checksum differs from expected';
   $('checksum').className = ok ? '' : 'bad';
@@ -445,22 +677,34 @@ function renderSettings() {
       <input id="${id}" data-param="${d.key}" type="number" min="${d.min * s}" max="${d.max * s}" step="${s}" value="${KS2.getParam(P, d.key)}">
       <span class="unit">${unit}</span></span>`;
   }).join('');
+  const len = patternLength(), can = !isBlank(P) && len * 2 <= 64;
+  $('doubleBtn').disabled = !can;
+  $('doubleBtn').title = can
+    ? `Repeat steps 1 to ${len} as ${len + 1} to ${len * 2} and set the length to ${len * 2}`
+    : isBlank(P) ? 'Empty slot' : `A pattern holds 64 steps; ${len} cannot be doubled`;
 }
 
 function renderNote() {
-  if (!sel) {
-    $('noteBox').innerHTML = `<div class="empty-note">${isBlank(P) ? 'Empty slot. Click the grid to add the first note.' : 'No note selected.'}</div>`;
-    return;
-  }
-  const o = sel.note;
   const row = (label, f, attrs, unit) => `<label for="n_${f}">${label}</label><span class="with-unit">
     <input id="n_${f}" type="number" data-note="${f}" ${attrs}><span class="unit">${unit}</span></span>`;
-  $('noteBox').innerHTML = `<div class="rows">
-    ${row('Pitch', 'n', `min="0" max="127" value="${o.n}"`, KS2.noteName(o.n))}
-    ${row('Step', 's', `min="1" max="64" value="${sel.step + 1}"`, '')}
-    ${row('Velocity', 'v', `min="1" max="127" value="${o.v}"`, '')}
-    ${row('Length', 'l', `min="0.5" max="64" step="0.5" value="${o.l / 2}"`, 'steps')}
-    </div><button class="wide" id="deleteBtn" title="Delete (Del)">Delete note</button>`;
+  const actions = `<div class="pair"><button id="dupBtn" title="Repeat right after (${MOD}+D)">Duplicate</button>
+    <button id="deleteBtn" title="Delete (Del)">Delete</button></div>`;
+  const o = single();
+  if (o) {
+    $('noteBox').innerHTML = `<div class="rows">
+      ${row('Pitch', 'n', `min="0" max="127" value="${o.n}"`, KS2.noteName(o.n))}
+      ${row('Step', 's', `min="1" max="64" value="${o.s + 1}"`, '')}
+      ${row('Velocity', 'v', `min="1" max="127" value="${o.v}"`, '')}
+      ${row('Length', 'l', `min="0.5" max="64" step="0.5" value="${o.l / 2}"`, 'steps')}</div>${actions}`;
+  } else if (selection.size) {
+    const same = (f) => (picked().every((p) => p[f] === picked()[0][f]) ? picked()[0][f] : null);
+    const v = same('v'), l = same('l');
+    $('noteBox').innerHTML = `<div class="empty-note">${selection.size} notes selected.</div><div class="rows">
+      ${row('Velocity', 'gv', `min="1" max="127" value="${v ?? ''}" placeholder="mixed"`, '')}
+      ${row('Length', 'gl', `min="0.5" max="64" step="0.5" value="${l ? l / 2 : ''}" placeholder="mixed"`, 'steps')}</div>${actions}`;
+  } else {
+    $('noteBox').innerHTML = `<div class="empty-note">${isBlank(P) ? 'Empty slot. Click the grid to add the first note.' : 'No note selected.'}</div>`;
+  }
 }
 
 const hex = (bytes) => Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join(' ');
@@ -468,7 +712,7 @@ const hex = (bytes) => Array.from(bytes, (b) => b.toString(16).padStart(2, '0'))
 function renderRaw() {
   if (!$('raw').open) return;
   if (isBlank(P)) { $('rawBody').innerHTML = '<p>Empty slot: all 4096 bytes are FF.</p>'; return; }
-  const b = P.blob, s = sel ? sel.step : 0, o = KS2.STEPS_OFFSET + s * KS2.RECORD_SIZE;
+  const b = P.blob, s = selection.size ? Math.min(...picked().map((o) => o.s)) : 0, o = KS2.STEPS_OFFSET + s * KS2.RECORD_SIZE;
   const rec = (label, from, len) => `<dt>+${from} ${label}</dt><dd class="hex">${hex(b.subarray(o + from, o + from + len))}</dd>`;
   const stored = KS2.storedChecksum(b), calc = KS2.xorSum(b) ^ KS2.CHECKSUM_BIAS;
   const hx = (v) => v.toString(16).toUpperCase().padStart(4, '0');
@@ -494,124 +738,216 @@ function renderRaw() {
 }
 
 // ---- rendering: piano roll --------------------------------------------------
+let frameQueued = false;
 function draw() {
+  if (frameQueued) return;
+  frameQueued = true;
+  requestAnimationFrame(() => { frameQueued = false; paint(); });
+}
+
+function lightKey(pitch, ms) {
+  lit.set(pitch, performance.now() + ms);
+  draw();
+  setTimeout(draw, ms + 20);
+}
+
+function paint() {
   const dpr = window.devicePixelRatio || 1, W = canvas.clientWidth, H = canvas.clientHeight;
   if (!file || !W || !H) return;
   if (canvas.width !== Math.round(W * dpr) || canvas.height !== Math.round(H * dpr)) {
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
   }
-  topPitch = clampTop(topPitch);
+  clampView();
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const cs = getComputedStyle(document.documentElement), c = (n) => cs.getPropertyValue(n).trim();
   const col = { bg: c('--bg'), panel: c('--panel'), surface: c('--surface'), sunken: c('--sunken'), ink: c('--ink'),
-    muted: c('--muted'), line: c('--line'), strong: c('--line-strong'), note: c('--note'), accent: c('--accent') };
-  const cw = colW(), len = KS2.getParam(P, 'length'), ROWS = rows(), GH = ROWS * ROWH, VT = velTop();
-  const xOf = (step) => KEYW + step * cw, yOf = (pitch) => RULER + (topPitch - pitch) * ROWH;
+    muted: c('--muted'), line: c('--line'), strong: c('--line-strong'), note: c('--note'), accent: c('--accent'),
+    playhead: c('--playhead'), keyWhite: c('--key-white'), keyBlack: c('--key-black'), select: c('--select'),
+    hover: c('--hover') };
+  const cw = view.colW, rh = view.rowH, len = patternLength(), GH = tall(), GB = RULER + GH, VT = velTop();
+  const font = cs.getPropertyValue('--font');
+  const now = performance.now();
+  for (const [p, until] of lit) if (until <= now) lit.delete(p);
+  const sounding = (p) => p === heldKey || lit.has(p);
   ctx.fillStyle = col.surface; ctx.fillRect(0, 0, W, H);
-  ctx.font = `11px ${cs.getPropertyValue('--font')}`;
   ctx.textBaseline = 'middle';
 
-  // rows
-  for (let r = 0; r < ROWS; r++) {
-    const pitch = topPitch - r, y = RULER + r * ROWH;
-    if (BLACK[pitch % 12]) { ctx.fillStyle = col.sunken; ctx.fillRect(0, y, W, ROWH); }
-    if (pitch % 12 === 0 || pitch % 12 === 5) { ctx.fillStyle = col.line; ctx.fillRect(0, y + ROWH - 0.5, W, 1); }
-    if (pitch % 12 === 0) { ctx.fillStyle = col.muted; ctx.fillText(KS2.noteName(pitch), 8, y + ROWH / 2 + 0.5); }
+  const pHi = Math.min(127, Math.ceil(view.top) - 1), pLo = Math.max(0, Math.floor(view.top - GH / rh) - 1);
+  const sLo = Math.max(0, Math.floor(view.step0)), sHi = Math.min(64, Math.ceil(view.step0 + wide() / cw));
+
+  // ---- grid ----
+  ctx.save();
+  ctx.beginPath(); ctx.rect(KEYW, RULER, W - KEYW, GH); ctx.clip();
+  for (let p = pHi; p >= pLo; p--) {
+    const y = yOf(p);
+    if (BLACK[p % 12]) { ctx.fillStyle = col.sunken; ctx.fillRect(KEYW, y, W, rh); }
+    if (p % 12 === 0 || p % 12 === 5) { ctx.fillStyle = col.line; ctx.fillRect(KEYW, y + rh - 0.5, W, 1); }
   }
-  // velocity lane background
-  ctx.fillStyle = col.panel; ctx.fillRect(0, RULER + GH, W, H - RULER - GH);
-  ctx.fillStyle = col.line; ctx.fillRect(0, RULER + GH - 0.5, W, 1);
-  // columns
-  for (let s = 0; s <= 64; s++) {
-    ctx.fillStyle = s % 16 === 0 ? col.strong : col.line;
-    ctx.globalAlpha = s % 4 === 0 ? 1 : 0.45;
-    ctx.fillRect(Math.round(xOf(s)) - 0.5, RULER, 1, GH);
-    ctx.fillRect(Math.round(xOf(s)) - 0.5, VT, 1, VELH);
+  if (hover && (hover.zone === 'grid' || hover.zone === 'keys') && !box) {
+    ctx.fillStyle = col.hover; ctx.fillRect(KEYW, yOf(hover.pitch), W, rh);
   }
-  ctx.globalAlpha = 1;
+  ctx.restore();
+
+  const columns = (top, height) => {
+    for (let s = sLo; s <= sHi; s++) {
+      if (s % 4 && cw < 6) continue;
+      ctx.fillStyle = s % 16 === 0 ? col.strong : col.line;
+      ctx.globalAlpha = s % 4 === 0 ? 1 : 0.45;
+      const x = Math.round(xOf(s));
+      if (x >= KEYW) ctx.fillRect(x - 0.5, top, 1, height);
+    }
+    ctx.globalAlpha = 1;
+  };
+  columns(RULER, GH);
+
+  // velocity lane ground
+  ctx.fillStyle = col.panel; ctx.fillRect(0, GB, W, H - GB);
+  ctx.fillStyle = col.line; ctx.fillRect(0, GB - 0.5, W, 1);
+  columns(VT, VELH);
+
+  ctx.save();
+  ctx.beginPath(); ctx.rect(KEYW, RULER, W - KEYW, H - RULER); ctx.clip();
   if (playing && playhead >= 0) {
-    ctx.fillStyle = col.accent; ctx.globalAlpha = 0.16;
+    ctx.fillStyle = col.playhead; ctx.globalAlpha = 0.2;
     ctx.fillRect(xOf(playhead), RULER, cw, H - RULER);
     ctx.globalAlpha = 1;
   }
-
-  // notes
-  ctx.save();
-  ctx.beginPath(); ctx.rect(KEYW, RULER, W - KEYW, GH); ctx.clip();
-  steps.forEach((notes, s) => notes.forEach((o) => {
-    const x = xOf(s) + 1, y = yOf(o.n) + 1, w = Math.max(o.l / 2 * cw - 2, 4), h = ROWH - 2;
-    ctx.globalAlpha = 0.4 + 0.6 * (o.v / 127);
-    ctx.fillStyle = col.note;
-    ctx.beginPath(); ctx.roundRect(x, y, w, h, 2.5); ctx.fill();
-    ctx.globalAlpha = 1;
-    if (sel && sel.note === o) {
-      ctx.strokeStyle = col.accent; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.roundRect(x - 1, y - 1, w + 2, h + 2, 3.5); ctx.stroke();
-    }
-  }));
   ctx.restore();
 
-  // velocity lane
-  ctx.fillStyle = col.muted; ctx.fillText('Vel', 8, VT + 10);
+  // ---- notes ----
+  ctx.save();
+  ctx.beginPath(); ctx.rect(KEYW, RULER, W - KEYW, GH); ctx.clip();
+  const pad = rh >= 8 ? 1 : 0.5;
+  steps.forEach((notes, s) => notes.forEach((o) => {
+    const x = xOf(s) + 1, y = yOf(o.n) + pad, w = Math.max(o.l / 2 * cw - 2, 4), h = rh - pad * 2;
+    if (x > W || x + w < KEYW) return;
+    ctx.globalAlpha = 0.4 + 0.6 * (o.v / 127);
+    ctx.fillStyle = col.note;
+    ctx.beginPath(); ctx.roundRect(x, y, w, h, Math.min(2.5, h / 3)); ctx.fill();
+    ctx.globalAlpha = 1;
+    if (selection.has(o)) {
+      ctx.strokeStyle = col.accent; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.roundRect(x - 1, y - 1, w + 2, h + 2, Math.min(3.5, h / 3 + 1)); ctx.stroke();
+    }
+  }));
+  if (box) {
+    const x0 = xOf(Math.min(box.s0, box.s1)), x1 = xOf(Math.max(box.s0, box.s1));
+    const y0 = RULER + (view.top - Math.max(box.p0, box.p1)) * rh, y1 = RULER + (view.top - Math.min(box.p0, box.p1)) * rh;
+    ctx.fillStyle = col.select; ctx.globalAlpha = 0.14; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+    ctx.globalAlpha = 1; ctx.strokeStyle = col.select; ctx.lineWidth = 1;
+    ctx.strokeRect(Math.round(x0) + 0.5, Math.round(y0) + 0.5, Math.round(x1 - x0), Math.round(y1 - y0));
+  }
+  ctx.restore();
+
+  // ---- velocity bars ----
+  ctx.save();
+  ctx.beginPath(); ctx.rect(KEYW, VT, W - KEYW, VELH); ctx.clip();
   steps.forEach((notes, s) => {
-    const sorted = notes.slice().sort((a, b) => a.n - b.n), bw = Math.min(6, (cw - 3) / Math.max(sorted.length, 1));
+    if (!notes.length || s < sLo - 1 || s > sHi) return;
+    const sorted = notes.slice().sort((a, b) => a.n - b.n), bw = Math.min(10, (cw - 3) / sorted.length);
     sorted.forEach((o, i) => {
       const h = Math.max(2, o.v / 127 * (VELH - 4));
-      ctx.fillStyle = sel && sel.note === o ? col.accent : col.note;
+      ctx.fillStyle = selection.has(o) ? col.accent : col.note;
       ctx.fillRect(xOf(s) + 2 + i * bw, H - h, Math.max(bw - 1, 1.5), h);
     });
   });
+  ctx.restore();
+  ctx.font = `11px ${font}`;
+  ctx.fillStyle = col.muted; ctx.fillText('Vel', 8, VT + 10);
 
-  // beyond pattern length
-  ctx.fillStyle = col.bg; ctx.globalAlpha = 0.62;
-  ctx.fillRect(xOf(len), RULER, W - xOf(len), H - RULER);
-  ctx.globalAlpha = 1;
+  // ---- beyond pattern length ----
+  const lx = Math.round(xOf(len));
+  if (lx < W) {
+    ctx.fillStyle = col.bg; ctx.globalAlpha = 0.62;
+    ctx.fillRect(Math.max(KEYW, lx), RULER, W, H - RULER);
+    ctx.globalAlpha = 1;
+  }
 
-  // ruler and length marker
+  // ---- keyboard strip ----
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, RULER, KEYW, GH); ctx.clip();
+  ctx.fillStyle = col.keyWhite; ctx.fillRect(0, RULER, KEYW, GH);
+  const blackW = Math.round(KEYW * 0.62), small = Math.min(11, Math.max(8, rh - 2));
+  ctx.font = `${small}px ${font}`;
+  const hoverKey = hover && (hover.zone === 'keys' || hover.zone === 'grid') ? hover.pitch : -1;
+  for (let p = pHi; p >= pLo; p--) {
+    const y = yOf(p), black = BLACK[p % 12], on = sounding(p), over = hover && hover.zone === 'keys' && hover.pitch === p;
+    if (black) { ctx.fillStyle = col.keyBlack; ctx.fillRect(0, y + 0.5, blackW, rh - 1); }
+    else if (p % 12 === 0 || p % 12 === 5) { ctx.fillStyle = col.strong; ctx.fillRect(0, y + rh - 0.5, KEYW, 1); }
+    if (on || over) {
+      ctx.fillStyle = col.select; ctx.globalAlpha = on ? 1 : 0.3;
+      ctx.fillRect(0, y + 0.5, black ? blackW : KEYW, rh - 1);
+      ctx.globalAlpha = 1;
+    }
+    if ((p % 12 === 0 || p === hoverKey || on) && rh >= 7) {
+      const inside = black || on;
+      ctx.fillStyle = on ? c('--on-select') : black ? col.keyWhite : col.keyBlack;
+      ctx.textAlign = black ? 'left' : 'right';
+      ctx.fillText(KS2.noteName(p), black ? 4 : KEYW - 4, y + rh / 2 + 0.5);
+      if (!inside && on) ctx.fillStyle = col.keyBlack;
+    }
+  }
+  ctx.textAlign = 'left';
+  ctx.restore();
+  ctx.fillStyle = col.strong; ctx.fillRect(KEYW - 0.5, RULER, 1, GH);
+  ctx.fillStyle = col.panel; ctx.fillRect(0, GB, KEYW, VGAP);
+
+  // ---- ruler and length marker ----
+  ctx.font = `11px ${font}`;
   ctx.fillStyle = col.panel; ctx.fillRect(0, 0, W, RULER);
   ctx.fillStyle = col.line; ctx.fillRect(0, RULER - 0.5, W, 1);
-  for (let s = 0; s < 64; s += cw < 14 ? 4 : 1) {
-    if (s % 4 && cw < 26) continue;
+  const every = cw >= 22 ? 1 : cw >= 7 ? 4 : 16;
+  ctx.save();
+  ctx.beginPath(); ctx.rect(KEYW, 0, W - KEYW, H); ctx.clip();
+  for (let s = Math.floor(sLo / every) * every; s < sHi; s += every) {
     ctx.fillStyle = s < len ? (s % 4 === 0 ? col.ink : col.muted) : col.strong;
     ctx.fillText(String(s + 1), xOf(s) + 3, RULER / 2);
   }
-  const lx = Math.round(xOf(len));
   ctx.fillStyle = col.ink;
   ctx.fillRect(lx - 1, 0, 2, H);
   ctx.beginPath(); ctx.moveTo(lx, 0); ctx.lineTo(lx - 9, 0); ctx.lineTo(lx - 9, 7); ctx.lineTo(lx, 13); ctx.closePath(); ctx.fill();
+  ctx.restore();
 }
 
 // ---- pointer editing --------------------------------------------------------
 let drag = null;
 
 function locate(e) {
-  const r = canvas.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, cw = colW();
-  const stepF = (x - KEYW) / cw;
-  return { x, y, cw, stepF, step: clamp(Math.floor(stepF), 0, 63), pitch: topPitch - Math.floor((y - RULER) / ROWH),
-    zone: y < RULER ? 'ruler' : y < gridBottom() ? (x < KEYW ? 'keys' : 'grid') : y >= velTop() ? 'vel' : 'gap' };
+  const r = canvas.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+  const stepF = stepAt(x);
+  return { x, y, stepF, step: clamp(Math.floor(stepF), 0, 63), pitch: pitchAt(y), pitchF: view.top - (y - RULER) / view.rowH,
+    zone: y < RULER ? 'ruler' : y < RULER + tall() ? (x < KEYW ? 'keys' : 'grid') : y >= velTop() ? 'vel' : 'gap' };
 }
 
+/**
+ * The note under the pointer. The right part of a note resizes it; that zone reaches a few pixels
+ * past the note's end so short notes can be resized too.
+ */
 function noteAt(p) {
-  let hit = null;
-  steps.forEach((notes, s) => notes.forEach((o) => {
-    const end = s + Math.max(o.l / 2, 4 / p.cw);
-    if (o.n === p.pitch && p.stepF >= s && p.stepF < end) {
-      const wide = o.l / 2 * p.cw >= 12;
-      hit = { step: s, note: o, edge: wide && (end - p.stepF) * p.cw <= 6 };
-    }
-  }));
-  return hit;
+  let inside = null, near = null;
+  for (const o of steps.flat()) {
+    if (o.n !== p.pitch) continue;
+    const x0 = xOf(o.s), w = Math.max(o.l / 2 * view.colW, 4), x1 = x0 + w;
+    const grip = clamp(w * 0.4, 3, 7);
+    if (p.x >= x0 && p.x < x1) { if (!inside || o.s > inside.note.s) inside = { note: o, edge: p.x >= x1 - grip }; }
+    else if (p.x >= x1 && p.x < x1 + 4) near = { note: o, edge: true };
+  }
+  return inside || near;
 }
 
-function touch() { if (!drag.snapped) { snapshot(); drag.snapped = true; } }
+function touch() {
+  if (drag.snapped) return;
+  drag.redo = redoStack; drag.wasDirty = dirty;
+  snapshot(); drag.snapped = true;
+}
 
 function paintVelocity(p) {
   const notes = steps[p.step];
   if (!notes.length || p.x < KEYW) return;
   const v = clamp(Math.round((canvas.clientHeight - p.y) / (VELH - 4) * 127), 1, 127);
-  const targets = sel && sel.step === p.step ? [sel.note] : notes;
+  const mine = notes.filter((o) => selection.has(o)), targets = mine.length ? mine : notes;
   if (targets.every((o) => o.v === v)) return;
-  touch();
+  touch(); drag.changed = true;
   targets.forEach((o) => { o.v = v; });
   lastVel = v;
   commit([p.step]);
@@ -619,32 +955,61 @@ function paintVelocity(p) {
 
 function setLengthFrom(p) {
   const len = clamp(Math.round(p.stepF), 1, 64);
-  if (len === KS2.getParam(P, 'length')) return;
-  touch();
+  if (len === patternLength()) return;
+  touch(); drag.changed = true;
   KS2.setParam(P, 'length', len);
 }
 
+function pressKey(pitch) {
+  if (pitch < 0 || pitch > 127 || pitch === heldKey) return;
+  heldKey = pitch; blip(pitch, 100);
+}
+
+function boxSelect(p) {
+  box.s1 = p.stepF; box.p1 = p.pitchF;
+  const sA = Math.min(box.s0, box.s1), sB = Math.max(box.s0, box.s1), pA = Math.min(box.p0, box.p1), pB = Math.max(box.p0, box.p1);
+  selection = new Set(drag.base);
+  for (const o of steps.flat()) {
+    if (o.s < sB && o.s + Math.max(o.l / 2, 0.25) > sA && o.n < pB && o.n + 1 > pA) selection.add(o);
+  }
+}
+
 canvas.addEventListener('pointerdown', (e) => {
-  if (e.button !== 0 || !file) return;
+  if (!file || e.button > 1) return;
   canvas.focus({ preventScroll: true });
   const p = locate(e);
-  drag = { mode: null, snapped: false };
-  if (p.zone === 'ruler') { drag.mode = 'length'; setLengthFrom(p); }
+  drag = { mode: null, snapped: false, changed: false, x: p.x, y: p.y };
+  if (e.button === 1) { e.preventDefault(); drag.mode = 'pan'; drag.step0 = view.step0; drag.top = view.top; canvas.style.cursor = 'grabbing'; }
+  else if (p.zone === 'ruler') { drag.mode = 'length'; setLengthFrom(p); }
   else if (p.zone === 'vel') { drag.mode = 'vel'; paintVelocity(p); }
-  else if (p.zone === 'keys') { blip(p.pitch, 100); drag = null; return; }
+  else if (p.zone === 'keys') { drag.mode = 'keys'; pressKey(p.pitch); }
   else if (p.zone === 'grid') {
     const hit = noteAt(p);
+    if (hit && e.shiftKey) {
+      if (selection.has(hit.note)) selection.delete(hit.note); else selection.add(hit.note);
+      drag = null; renderAll(); return;
+    }
     if (hit) {
-      sel = { step: hit.step, note: hit.note };
+      if (!selection.has(hit.note)) selection = new Set([hit.note]);
       drag.mode = hit.edge ? 'resize' : 'move';
-      drag.grab = p.stepF - hit.step;
+      drag.grab = hit.note;
+      drag.copy = !hit.edge && e.altKey;
       if (!hit.edge) audition(hit.note);
+    } else if (e.shiftKey || e.metaKey || e.ctrlKey) {
+      drag.mode = 'box'; drag.base = new Set(e.shiftKey ? selection : []);
+      box = { s0: p.stepF, p0: p.pitchF, s1: p.stepF, p1: p.pitchF };
+      selection = new Set(drag.base);
     } else {
       touch();
       const note = addNote(p.step, p.pitch);
-      if (!note) { undoStack.pop(); drag = null; renderAll(); return; }
-      sel = { step: p.step, note }; drag.mode = 'move'; drag.grab = 0.5;
+      if (!note) { endDrag(); return; }
+      drag.changed = true;
+      selection = new Set([note]); drag.mode = 'move'; drag.grab = note;
       audition(note);
+    }
+    if (drag.mode === 'move' || drag.mode === 'resize') {
+      drag.stepF = p.stepF; drag.pitch = p.pitch; drag.dS = 0; drag.dP = 0;
+      drag.origin = picked().map((o) => ({ note: o, s: o.s, n: o.n, l: o.l }));
     }
   } else { drag = null; return; }
   canvas.setPointerCapture(e.pointerId);
@@ -658,44 +1023,89 @@ canvas.addEventListener('pointermove', (e) => {
     const hit = p.zone === 'grid' ? noteAt(p) : null;
     canvas.style.cursor = p.zone === 'ruler' ? 'ew-resize' : p.zone === 'vel' ? 'ns-resize'
       : hit ? (hit.edge ? 'ew-resize' : 'grab') : p.zone === 'keys' ? 'pointer' : 'crosshair';
+    const next = p.zone === 'grid' || p.zone === 'keys' ? { zone: p.zone, pitch: p.pitch } : null;
+    if ((hover && hover.zone) !== (next && next.zone) || (hover && hover.pitch) !== (next && next.pitch)) { hover = next; draw(); }
     return;
   }
-  if (drag.mode === 'length') setLengthFrom(p);
+  if (drag.mode === 'pan') {
+    view.step0 = drag.step0 - (p.x - drag.x) / view.colW;
+    view.top = drag.top + (p.y - drag.y) / view.rowH;
+    clampView();
+  } else if (drag.mode === 'length') setLengthFrom(p);
   else if (drag.mode === 'vel') paintVelocity(p);
+  else if (drag.mode === 'keys') { if (p.pitch !== heldKey) { heldKey = -1; pressKey(p.pitch); } }
+  else if (drag.mode === 'box') boxSelect(p);
   else if (drag.mode === 'move') {
-    const toStep = clamp(Math.floor(p.stepF - drag.grab + 0.5), 0, 63), toPitch = clamp(p.pitch, 0, 127);
-    if (toStep !== sel.step || toPitch !== sel.note.n) {
-      const before = undoStack.length;
+    const dS = Math.round(p.stepF - drag.stepF), dP = clamp(p.pitch, 0, 127) - drag.pitch;
+    if (dS !== drag.dS || dP !== drag.dP) {
       touch();
-      if (!moveNote(sel, toStep, toPitch) && undoStack.length > before) { undoStack.pop(); drag.snapped = false; }
+      if (drag.copy && !drag.copied) {
+        // Alt+drag: the originals stay, copies travel. They join the pattern at the first free place.
+        const copies = drag.origin.map((o) => ({ note: { n: o.n, v: o.note.v, l: o.l, x: o.note.x, s: -1 }, s: o.s, n: o.n, l: o.l }));
+        if (place(copies.map((c) => ({ note: c.note, s: c.s + dS, n: c.n + dP })))) {
+          drag.origin = copies; drag.copied = true; drag.changed = true;
+          drag.grab = copies[0].note; selection = new Set(copies.map((c) => c.note));
+          drag.dS = dS; drag.dP = dP; audition(drag.grab);
+        }
+      } else if (place(drag.origin.map((o) => ({ note: o.note, s: o.s + dS, n: o.n + dP })))) {
+        if (dP !== drag.dP) audition(drag.grab);
+        drag.dS = dS; drag.dP = dP; drag.changed = true;
+      }
     }
   } else if (drag.mode === 'resize') {
-    const l = clamp(Math.round((p.stepF - sel.step) * 2), 1, KS2.MAX_NOTE_LENGTH);
-    if (l !== sel.note.l) { touch(); sel.note.l = l; lastLen = l; commit([sel.step]); }
+    const by = Math.round((p.stepF - drag.stepF) * 2);
+    let changed = false;
+    for (const o of drag.origin) {
+      const l = clamp(o.l + by, 1, KS2.MAX_NOTE_LENGTH);
+      if (l !== o.note.l) { touch(); o.note.l = l; changed = true; }
+    }
+    if (changed) { drag.changed = true; lastLen = drag.grab.l; commit(drag.origin.map((o) => o.note.s)); }
   }
   renderNote(); draw();
 });
 
 function endDrag() {
   if (!drag) return;
-  drag = null;
+  if (drag.snapped && !drag.changed) { undoStack.pop(); redoStack = drag.redo; dirty = drag.wasDirty; }
+  drag = null; box = null; heldKey = -1;
+  canvas.style.cursor = 'crosshair';
   renderAll();
 }
 canvas.addEventListener('pointerup', endDrag);
 canvas.addEventListener('pointercancel', endDrag);
+canvas.addEventListener('pointerleave', () => { if (hover) { hover = null; draw(); } });
+canvas.addEventListener('mousedown', (e) => { if (e.button === 1) e.preventDefault(); }); // no autoscroll puck
 
 function removeAt(e) {
   if (!file) return;
   const p = locate(e), hit = p.zone === 'grid' ? noteAt(p) : null;
   if (!hit) return;
-  snapshot(); deleteNote(hit); renderAll();
+  edit(() => removeNotes([hit.note]));
 }
 canvas.addEventListener('dblclick', removeAt);
 canvas.addEventListener('contextmenu', (e) => { e.preventDefault(); removeAt(e); });
+
+// Scroll pans; Cmd/Ctrl+scroll (and trackpad pinch) zooms time, Alt+scroll zooms the keys, both about the pointer.
 canvas.addEventListener('wheel', (e) => {
-  if (!file || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+  if (!file) return;
   e.preventDefault();
-  topPitch = clampTop(topPitch - Math.sign(e.deltaY) * Math.max(1, Math.round(Math.abs(e.deltaY) / 30)));
+  const p = locate(e), unit = e.deltaMode === 1 ? 16 : 1, dx = e.deltaX * unit, dy = e.deltaY * unit;
+  const factor = Math.exp(-clamp(dy, -60, 60) * 0.012);
+  if (e.ctrlKey || e.metaKey) {
+    const x = Math.max(KEYW, p.x), step = stepAt(x);
+    view.colW *= factor; clampView();
+    view.step0 = step - (x - KEYW) / view.colW;
+  } else if (e.altKey) {
+    const y = Math.max(RULER, p.y), key = view.top - (y - RULER) / view.rowH;
+    view.rowH *= factor; clampView();
+    view.top = key + (y - RULER) / view.rowH;
+  } else {
+    const grid = p.zone === 'grid' || p.zone === 'keys';
+    view.step0 += (grid ? dx + (e.shiftKey ? dy : 0) : dx + dy) / view.colW;
+    if (grid && !e.shiftKey) view.top -= dy / view.rowH;
+  }
+  clampView();
+  if (!drag) { hover = p.zone === 'grid' || p.zone === 'keys' ? { zone: p.zone, pitch: pitchAt(p.y) } : null; }
   draw();
 }, { passive: false });
 
@@ -707,29 +1117,23 @@ document.addEventListener('keydown', (e) => {
   const typing = /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName);
   if (mod && k === 'z') { e.preventDefault(); e.shiftKey ? restore(redoStack, undoStack) : restore(undoStack, redoStack); return; }
   if (mod && k === 's') { e.preventDefault(); saveCopy(); return; }
-  if (typing || mod) return;
+  if (typing) return;
+  if (mod && (k === 'd' || k === 'b')) { e.preventDefault(); duplicateSelection(); return; }
+  if (mod && k === 'a') { e.preventDefault(); selection = new Set(steps.flat()); renderAll(); return; }
+  if (mod) return;
   if (e.key === ' ') { e.preventDefault(); togglePlay(); return; }
-  if (!sel) return;
+  if (k === 'f') { fitAll(); return; }
+  if (k === 'd' && selection.size) { duplicateSelection(); return; }
+  if (!selection.size) return;
   const arrows = { ArrowUp: [0, 1], ArrowDown: [0, -1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }[e.key];
   if (arrows) {
     e.preventDefault();
-    const before = undoStack.length;
-    snapshot();
-    let ok;
-    if (e.shiftKey && arrows[0]) {
-      const l = clamp(sel.note.l + arrows[0], 1, KS2.MAX_NOTE_LENGTH);
-      ok = l !== sel.note.l;
-      if (ok) { sel.note.l = l; lastLen = l; commit([sel.step]); }
-    } else {
-      ok = moveNote(sel, sel.step + arrows[0], sel.note.n + arrows[1] * (e.shiftKey ? 12 : 1));
-    }
-    if (!ok) undoStack.length = before;
-    if (sel.note.n > topPitch) topPitch = sel.note.n;
-    if (sel.note.n < topPitch - rows() + 1) topPitch = sel.note.n + rows() - 1;
-    renderAll();
+    const stretch = e.shiftKey && arrows[0];
+    const ok = edit(() => (stretch ? stretchSelection(arrows[0]) : moveSelection(arrows[0], arrows[1] * (e.shiftKey ? 12 : 1))));
+    if (ok && !stretch) { if (arrows[1] && single()) audition(single()); reveal(picked()[0]); draw(); }
   } else if (e.key === 'Delete' || e.key === 'Backspace') {
-    e.preventDefault(); snapshot(); deleteNote(sel); renderAll();
-  } else if (e.key === 'Escape') { sel = null; renderAll(); }
+    e.preventDefault(); edit(() => removeNotes(picked()));
+  } else if (e.key === 'Escape') { selection = new Set(); renderAll(); }
 });
 
 // ---- sound ------------------------------------------------------------------
@@ -759,7 +1163,11 @@ function voice(pitch, vel, t, dur) {
   osc.start(t); osc.stop(t + Math.max(dur, 0.03) + 0.06);
 }
 
-function blip(pitch, vel) { if (soundOn && pitch >= 0 && pitch <= 127) { audio(); voice(pitch, vel, ac.currentTime, 0.14); } }
+function blip(pitch, vel) {
+  if (pitch < 0 || pitch > 127) return;
+  lightKey(pitch, 180);
+  if (soundOn) { audio(); voice(pitch, vel, ac.currentTime, 0.14); }
+}
 function audition(note) { if (!playing) blip(note.n, note.v); }
 
 function stepSeconds() {
@@ -770,12 +1178,14 @@ function stepSeconds() {
   return 60 / KS2.getParam(P, 'tempo') * beats;
 }
 
+const noteSeconds = (o, d, gate) => (o.l >= 2 ? d * (o.l / 2 - 1 + gate) : d * gate / 2);
+
 function schedule() {
   while (nextTime < ac.currentTime + 0.12) {
-    const d = stepSeconds(), len = KS2.getParam(P, 'length'), gate = KS2.getParam(P, 'gate') / 100;
+    const d = stepSeconds(), len = patternLength(), gate = KS2.getParam(P, 'gate') / 100;
     if (playStep >= len) playStep = 0;
     const t = nextTime + (playStep % 2 ? (KS2.getParam(P, 'swing') / 50 - 1) * d : 0);
-    for (const o of steps[playStep]) voice(o.n, o.v, t, o.l >= 2 ? d * (o.l / 2 - 1 + gate) : d * gate / 2);
+    for (const o of steps[playStep]) voice(o.n, o.v, t, noteSeconds(o, d, gate));
     queue.push({ step: playStep, t });
     nextTime += d; playStep++;
   }
@@ -785,7 +1195,12 @@ function frame() {
   if (!playing) return;
   while (queue.length > 1 && queue[1].t <= ac.currentTime) queue.shift();
   const now = queue.length && queue[0].t <= ac.currentTime ? queue[0].step : playhead;
-  if (now !== playhead) { playhead = now; draw(); }
+  if (now !== playhead) {
+    playhead = now;
+    const d = stepSeconds(), gate = KS2.getParam(P, 'gate') / 100;
+    for (const o of steps[now] || []) lightKey(o.n, Math.max(60, noteSeconds(o, d, gate) * 1000));
+    draw();
+  }
   requestAnimationFrame(frame);
 }
 
@@ -800,7 +1215,7 @@ function play() {
 }
 function stop() {
   if (!playing) return;
-  playing = false; clearInterval(timer); playhead = -1;
+  playing = false; clearInterval(timer); playhead = -1; lit.clear();
   $('playBtn').textContent = 'Play'; $('playBtn').setAttribute('aria-pressed', 'false');
   draw();
 }
@@ -812,7 +1227,9 @@ $('saveBtn').onclick = saveCopy;
 $('undoBtn').onclick = () => restore(undoStack, redoStack);
 $('redoBtn').onclick = () => restore(redoStack, undoStack);
 $('playBtn').onclick = togglePlay;
+$('fitBtn').onclick = fitAll;
 $('soundBtn').onclick = () => { soundOn = !soundOn; $('soundBtn').setAttribute('aria-pressed', soundOn); };
+$('doubleBtn').onclick = doublePattern;
 
 $('banks').onclick = (e) => { const b = e.target.closest('[data-bank]'); if (b && file) selectPattern(+b.dataset.bank, number); };
 $('slots').onclick = (e) => { const b = e.target.closest('[data-number]'); if (b) selectPattern(bank, +b.dataset.number); };
@@ -828,10 +1245,13 @@ $('settings').addEventListener('change', (e) => {
 $('noteBox').addEventListener('change', (e) => {
   const f = e.target.dataset.note, v = parseFloat(e.target.value);
   if (!f || Number.isNaN(v)) return;
-  setNoteField(f, f === 'l' ? Math.round(v * 2) : Math.round(v));
+  if (f === 'gv') setGroupField('v', Math.round(v));
+  else if (f === 'gl') setGroupField('l', Math.round(v * 2));
+  else setNoteField(f, f === 'l' ? Math.round(v * 2) : Math.round(v));
 });
 $('noteBox').addEventListener('click', (e) => {
-  if (e.target.id === 'deleteBtn' && sel) { snapshot(); deleteNote(sel); renderAll(); }
+  if (e.target.id === 'deleteBtn' && selection.size) edit(() => removeNotes(picked()));
+  if (e.target.id === 'dupBtn') duplicateSelection();
 });
 
 $('copyBtn').onclick = () => {
@@ -846,10 +1266,7 @@ $('pasteBtn').onclick = () => {
 };
 $('clearBtn').onclick = () => {
   if (isBlank(P) || !steps.some((s) => s.length)) return;
-  snapshot();
-  steps = steps.map(() => []);
-  commit(steps.map((_, i) => i));
-  sel = null; renderAll();
+  edit(() => removeNotes(steps.flat()));
 };
 $('raw').addEventListener('toggle', renderRaw);
 
@@ -866,6 +1283,20 @@ addEventListener('drop', (e) => {
 addEventListener('beforeunload', (e) => { if (dirty) e.preventDefault(); });
 new ResizeObserver(draw).observe(canvas);
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw);
+
+// ---- skin ---------------------------------------------------------------------
+function setSkin(name) {
+  const known = [...$('skinSelect').options].some((o) => o.value === name);
+  document.documentElement.dataset.skin = known ? name : 'keystep';
+  $('skinSelect').value = document.documentElement.dataset.skin;
+  try { localStorage.setItem('ks2-skin', document.documentElement.dataset.skin); } catch (e) { /* storage unavailable */ }
+  draw();
+}
+$('skinSelect').onchange = (e) => setSkin(e.target.value);
+let savedSkin = null;
+try { savedSkin = localStorage.getItem('ks2-skin'); } catch (e) { /* storage unavailable */ }
+setSkin(savedSkin || 'keystep');
+document.fonts && document.fonts.ready.then(draw);
 
 // Served over http next to an export: open it straight away.
 if (location.protocol.startsWith('http')) {
