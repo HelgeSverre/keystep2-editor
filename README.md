@@ -49,6 +49,10 @@ Center first.
 3. Edit, then **Send pattern**. It writes the slot you are on to the same slot on the device, reads
    it back and compares it.
 
+A read can be cancelled at any point: what was received is discarded and neither the project in the
+editor nor the device changes. A send cannot be cancelled once it starts, because a half-written
+pattern would be worse than either the old or the new one; it takes about three seconds.
+
 Save a copy of what Read all returns before sending anything: that file is your backup, and MIDI
 Control Center can restore it.
 
@@ -123,10 +127,12 @@ Tested with one KeyStep mk2 on firmware 1.0.2 and MIDI Control Center on macOS.
 | File format | An unedited file serializes byte-identical; a project built from scratch equals MCC's export byte for byte |
 | Checksum and header rules | Hold for the 16 factory patterns and for 48 blank patterns the device generated itself |
 | Reading from the device | All 64 patterns read over MIDI equal MCC's export |
-| Writing to the device | Patterns written to a spare slot, edited ones included, read back byte-identical; neighbouring slots unchanged |
+| Writing to the device | All 16 factory patterns, a pattern with 8 notes on every step and every setting at its maximum, one with every setting at its minimum, and one with awkward byte values were each written to a spare slot and read back: notes, all 17 settings and checksum matched every time. Other slots were unchanged |
+| Cancelling a read | Cancelled at four points, including the last block of a pattern; every read afterwards was byte-identical |
 
-Not verified: other firmware versions (1.0.4 exists), importing an edited file through MCC, and
-what the device does if a transfer is interrupted. Keep a backup.
+Not verified: other firmware versions (1.0.4 exists), importing an edited file through MCC, how a
+sent pattern sounds (the checks compare data, not audio), and what the device does if a write is
+interrupted. Keep a backup.
 
 ## File format
 
@@ -286,3 +292,8 @@ A full MCC store also writes the global settings with `36FB`. This project does 
 - Parameter definitions: `/Library/Arturia/MIDI Control Center/Resources/KeyStep2.json`
 - Binary layout: inferred from `export.keystep2`
 - MIDI protocol: recorded from MIDI Control Center talking to a KeyStep mk2
+
+## Licence
+
+[MIT](LICENSE). The bundled fonts, Inter and Barlow Semi Condensed, are under the SIL Open Font
+License. `export.keystep2` holds Arturia's factory patterns and is included as test data.
