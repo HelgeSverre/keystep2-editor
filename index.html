@@ -222,6 +222,7 @@
   .slot svg { width: 100%; height: 100%; max-height: 28px; min-height: 8px; display: block; }
   .slot svg rect { fill: var(--note); }
   .slot .len { align-self: center; color: var(--label); font-size: 11px; text-align: right; padding-right: 8px; }
+  .slot:hover:not(:disabled) { border-color: var(--line); } /* the row divider stays put; only the well responds */
   .slot:hover:not([aria-pressed="true"]):not(:disabled) .well { border-color: var(--line-strong); }
   .slot.empty .num { color: var(--muted); font-weight: 400; }
   .slot.empty .well { background: none; border-style: dashed; }
