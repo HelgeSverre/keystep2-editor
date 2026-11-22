@@ -247,9 +247,10 @@
   #xfer #xferNote { flex: 1; font-size: 11.5px; }
   canvas#roll { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; outline: none; }
   #drop {
-    position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px;
-    color: var(--muted); font-size: 14px; background: var(--surface);
+    position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 6px;
+    color: var(--muted); font-size: 15px; pointer-events: none; text-align: center; padding: 0 24px;
   }
+  #drop .how { font-size: 12.5px; max-width: 46ch; }
   body.dragover #stage { box-shadow: inset 0 0 0 2px var(--accent); }
 
   /* Inspector */
@@ -323,6 +324,7 @@
         <button id="readAllBtn" disabled title="Read all 64 patterns from the device into a new project">Read all</button>
         <button id="readOneBtn" disabled title="Replace this slot with the same slot from the device">Read pattern</button>
         <button id="sendBtn" disabled title="Write this pattern to the same slot on the device">Send pattern</button>
+        <button id="sendAllBtn" disabled title="Write every pattern that holds data here to the device. Empty slots are skipped.">Send all</button>
       </div>
   <div class="skins" id="skins" role="group" aria-label="Skin">
       <button data-skin="light" aria-pressed="false" aria-label="Light skin" title="Light">
@@ -361,8 +363,8 @@
       </div>
       <canvas id="roll" tabindex="0" aria-label="Piano roll"></canvas>
       <div id="drop">
-        <span id="dropText">Drop a .keystep2 project here</span>
-        <button id="chooseBtn">Open…</button>
+        <span>Empty project</span>
+        <span class="how">Click the grid to start a pattern, drop a .keystep2 file here, or connect a KeyStep and read a slot.</span>
       </div>
     </main>
 
@@ -402,6 +404,7 @@ let selection = new Set();      // selected notes
 let undoStack = [], redoStack = [], clipboard = null;
 let lastVel = 100, lastLen = 2;
 let soundOn = true;
+let pristine = false;            // the untouched empty project the editor starts with
 let hover = null;               // { zone, pitch }
 let box = null;                 // selection rectangle { s0, p0, s1, p1 } in step and pitch units
 let heldKey = -1;               // key pressed on the keyboard strip
@@ -457,7 +460,7 @@ async function openFile(f) {
   try {
     loadBytes(new Uint8Array(await f.arrayBuffer()), f.name);
   } catch (e) {
-    if (file) say(e.message, true); else $('dropText').textContent = e.message;
+    say(e.message, true);
   }
 }
 
@@ -466,7 +469,7 @@ function loadBytes(bytes, name) {
   stop();
   file = parsed; fileName = name; dirty = false;
   undoStack = []; redoStack = []; clipboard = null;
-  $('drop').hidden = true;
+  pristine = false;
   const first = [...file.patterns.values()].filter((p) => !KS2.isEmpty(p.blob))
     .sort((a, b) => a.bank - b.bank || a.number - b.number)[0];
   selectPattern(first ? first.bank : 1, first ? first.number : 1);
@@ -516,6 +519,7 @@ function selectPattern(b, n, keepView) {
 }
 
 function snapshot() {
+  pristine = false;
   undoStack.push({ bank, number, blob: P.blob.slice(), params: { ...P.params }, bias: P.bias });
   if (undoStack.length > 300) undoStack.shift();
   redoStack = []; dirty = true;
@@ -691,6 +695,7 @@ function renderChrome() {
   $('pasteBtn').disabled = !clipboard;
   $('clearBtn').disabled = !file || !steps.some((s) => s.length);
   deviceButtons();
+  $('drop').hidden = !pristine || !!xfer;
   if (!file) return;
   const count = steps.reduce((a, s) => a + s.length, 0);
   const picks = selection.size > 1 ? `, ${selection.size} selected` : '';
@@ -1326,7 +1331,7 @@ function stop() {
 }
 
 // ---- controls ---------------------------------------------------------------
-$('openBtn').onclick = $('chooseBtn').onclick = () => $('fileInput').click();
+$('openBtn').onclick = () => $('fileInput').click();
 $('fileInput').onchange = (e) => { if (e.target.files[0]) openFile(e.target.files[0]); e.target.value = ''; };
 $('saveBtn').onclick = saveCopy;
 $('undoBtn').onclick = () => restore(undoStack, redoStack);
@@ -1400,10 +1405,11 @@ function beginXfer(title, parts, options = {}) {
   xfer = { title, parts, part: 0, frac: 0, big: '', note: '', started: performance.now(), cancel: false, cancellable: options.cancellable !== false,
     steps: null, arrived: 0, blobs: options.blobs || null, partial: null, bank, number, view: { ...view }, drawn: -1 };
   $('xferTrack').innerHTML = '<i></i>'.repeat(parts);
-  $('xferTrack').classList.toggle('banked', parts === 64);
-  $('xferBanks').hidden = parts !== 64; $('xferNote').hidden = parts === 64;
+  $('xferTrack').classList.toggle('banked', !!options.blobs);
+  $('xferBanks').hidden = !options.blobs; $('xferNote').hidden = !!options.blobs;
   $('xferCancel').hidden = !xfer.cancellable; $('xferCancel').disabled = false;
   $('xfer').hidden = false; $('drop').hidden = true;
+  pristine = false;
   selection = new Set(); box = null; hover = null;
   draw();
 }
@@ -1412,7 +1418,7 @@ function endXfer() {
   if (!xfer) return;
   Object.assign(view, xfer.view);
   xfer = null;
-  $('xfer').hidden = true; $('drop').hidden = !!file;
+  $('xfer').hidden = true;
 }
 
 function renderXfer() {
@@ -1464,6 +1470,7 @@ function deviceButtons() {
   $('readAllBtn').disabled = !device || busy;
   $('readOneBtn').disabled = !device || busy || !file;
   $('sendBtn').disabled = !device || busy || !file || isBlank(P);
+  $('sendAllBtn').disabled = !device || busy || !file || ![...file.patterns.values()].some((p) => !isBlank(p));
 }
 
 function confirmAction(text, okLabel) {
@@ -1566,37 +1573,81 @@ async function readOneFromDevice() {
   });
 }
 
-async function sendToDevice() {
-  const b = bank, n = number, pattern = P;
-  if (!(await confirmAction(`Send bank ${b}, pattern ${n} to the KeyStep? It replaces that pattern on the device.`, 'Send'))) return;
-  await transfer('Sending', async () => {
-    stop();
-    const blob = pattern.blob.slice();
-    const params = KS2MIDI.PARAM_ORDER.map((id) => {
-      const def = KS2.PARAM_BY_ID.get(id);
-      return { id, raw: pattern.params[id] === undefined ? KS2.paramsFromBlob(blob)[id] : pattern.params[id], range: def.range };
-    });
-    // Two halves: write, then read back and compare. A write is not cancellable: half a pattern is worse than either.
-    beginXfer('Sending to KeyStep mk2', 2, { cancellable: false });
-    xfer.big = `Bank ${b}, <span>pattern</span> ${n}`;
-    xfer.note = 'Writing. Keep the KeyStep connected.';
-    $('status').textContent = `Sending bank ${b}, pattern ${n} to the KeyStep…`;
-    await device.writePattern(b, n, blob, params, (done, total) => onBlocks(done, total));
-    xfer.part = 1; xfer.frac = 0; xfer.note = 'Reading it back to compare.';
-    const back = await device.readPattern(b, n, (done, total) => onBlocks(done, total));
-    for (let i = KS2.STEPS_OFFSET; i < KS2.STEPS_END; i++) if (back[i] !== blob[i]) throw new Error('the device holds different notes than were sent');
-    const want = KS2.paramsFromBlob(blob), got = KS2.paramsFromBlob(back);
-    for (const id of KS2MIDI.PARAM_ORDER) if (want[id] !== got[id]) throw new Error(`the device holds a different ${KS2.PARAM_BY_ID.get(id).label.toLowerCase()} than was sent`);
-    endXfer();
-    say(`Sent bank ${b}, pattern ${n} and read it back: it matches.`);
+function wireParams(pattern, blob) {
+  return KS2MIDI.PARAM_ORDER.map((id) => {
+    const def = KS2.PARAM_BY_ID.get(id);
+    return { id, raw: pattern.params[id] === undefined ? KS2.paramsFromBlob(blob)[id] : pattern.params[id], range: def.range };
   });
 }
 
-$('xferCancel').onclick = () => { if (xfer && xfer.cancellable) { xfer.cancel = true; $('xferCancel').disabled = true; } };
+/** Writes one pattern, reads it back and compares notes and settings. `part` is its first of two track segments. */
+async function writeAndCheck(pattern, part) {
+  const blob = pattern.blob.slice(), where = `bank ${pattern.bank}, pattern ${pattern.number}`;
+  const stopping = () => (xfer.cancel ? 'Stopping after this pattern. ' : '');
+  xfer.part = part; xfer.frac = 0; xfer.note = stopping() + 'Writing. Keep the KeyStep connected.';
+  await device.writePattern(pattern.bank, pattern.number, blob, wireParams(pattern, blob), (done, total) => { xfer.frac = done / total; draw(); });
+  xfer.part = part + 1; xfer.frac = 0; xfer.note = stopping() + 'Reading it back to compare.';
+  const back = await device.readPattern(pattern.bank, pattern.number, (done, total) => { xfer.frac = done / total; draw(); });
+  for (let i = KS2.STEPS_OFFSET; i < KS2.STEPS_END; i++) if (back[i] !== blob[i]) throw new Error(`the device holds different notes in ${where} than were sent`);
+  const want = KS2.paramsFromBlob(blob), got = KS2.paramsFromBlob(back);
+  for (const id of KS2MIDI.PARAM_ORDER) if (want[id] !== got[id]) throw new Error(`the device holds a different ${KS2.PARAM_BY_ID.get(id).label.toLowerCase()} in ${where} than was sent`);
+}
+
+async function sendToDevice() {
+  const pattern = P, where = `bank ${bank}, pattern ${number}`;
+  if (!(await confirmAction(`Send ${where} to the KeyStep? It replaces that pattern on the device.`, 'Send'))) return;
+  await transfer('Sending', async () => {
+    stop();
+    // Two halves: write, then read back and compare. A write is not cancellable: half a pattern is worse than either.
+    beginXfer('Sending to KeyStep mk2', 2, { cancellable: false });
+    xfer.big = `Bank ${pattern.bank}, <span>pattern</span> ${pattern.number}`;
+    $('status').textContent = `Sending ${where} to the KeyStep…`;
+    await writeAndCheck(pattern, 0);
+    endXfer();
+    say(`Sent ${where} and read it back: it matches.`);
+  });
+}
+
+async function sendAllToDevice() {
+  const list = [...file.patterns.values()].filter((p) => !isBlank(p)).sort((a, b) => a.bank - b.bank || a.number - b.number);
+  if (!list.length) return;
+  const skipped = 64 - list.length;
+  const text = `Send ${list.length} pattern${list.length === 1 ? '' : 's'} to the KeyStep? Each replaces the same slot on the device.`
+    + (skipped ? ` The ${skipped} empty slot${skipped === 1 ? '' : 's'} here ${skipped === 1 ? 'is' : 'are'} skipped and left as ${skipped === 1 ? 'it is' : 'they are'} on the device.` : '')
+    + ` This takes about ${list.length * 3.5 < 90 ? Math.round(list.length * 3.5) + ' seconds' : Math.round(list.length * 3.5 / 60) + ' minutes'}.`;
+  if (!(await confirmAction(text, 'Send all'))) return;
+  await transfer('Sending', async () => {
+    stop();
+    beginXfer('Sending to KeyStep mk2', list.length * 2);
+    let sent = 0;
+    for (const pattern of list) {
+      // Cancel takes effect between patterns, never inside one.
+      if (xfer.cancel) break;
+      const saved = xfer.view;
+      selectPattern(pattern.bank, pattern.number); xfer.view = saved;
+      xfer.big = `Pattern ${sent + 1} <span>of ${list.length}</span>`;
+      $('status').textContent = `Sending bank ${pattern.bank}, pattern ${pattern.number} to the KeyStep…`;
+      await writeAndCheck(pattern, sent * 2);
+      sent++;
+    }
+    const stopped = sent < list.length;
+    endXfer();
+    say(stopped
+      ? `Stopped. Sent and checked ${sent} of ${list.length} patterns; the rest are unchanged on the KeyStep.`
+      : `Sent ${sent} pattern${sent === 1 ? '' : 's'} and read each back: all match.`, stopped);
+  });
+}
+
+$('xferCancel').onclick = () => {
+  if (!xfer || !xfer.cancellable) return;
+  xfer.cancel = true; $('xferCancel').disabled = true;
+  if (!xfer.blobs && xfer.parts > 2) xfer.note = 'Stopping after this pattern. ' + xfer.note;
+};
 $('midiBtn').onclick = connectDevice;
 $('readAllBtn').onclick = readAllFromDevice;
 $('readOneBtn').onclick = readOneFromDevice;
 $('sendBtn').onclick = sendToDevice;
+$('sendAllBtn').onclick = sendAllToDevice;
 
 // ---- skin ---------------------------------------------------------------------
 function setSkin(name) {
@@ -1613,10 +1664,20 @@ try { savedSkin = localStorage.getItem('ks2-skin'); } catch (e) { /* storage una
 setSkin(savedSkin || 'light');
 document.fonts && document.fonts.ready.then(draw);
 
+// Start with an empty project: every slot can be selected, read from the device, edited and sent.
+function newProject() {
+  file = KS2.createProject(new Map()); fileName = 'Untitled.keystep2'; dirty = false;
+  undoStack = []; redoStack = []; clipboard = null;
+  selectPattern(1, 1);
+  pristine = true;
+  renderChrome();
+}
+newProject();
+
 // Served over http next to an export: open it straight away.
 if (location.protocol.startsWith('http')) {
   fetch('export.keystep2').then((r) => (r.ok ? r.arrayBuffer() : null))
-    .then((buf) => { if (buf && !file) loadBytes(new Uint8Array(buf), 'export.keystep2'); })
+    .then((buf) => { if (buf && pristine) loadBytes(new Uint8Array(buf), 'export.keystep2'); })
     .catch(() => {});
 }
 </script>

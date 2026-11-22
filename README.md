@@ -43,19 +43,27 @@ Keep your original export. See [Status](#status) for what has and has not been v
 Needs Chrome or Edge (Web MIDI with SysEx) and the KeyStep mk2 connected by USB. Close MIDI Control
 Center first.
 
+The editor starts with an empty project of 64 slots, so no file is needed.
+
 1. Press **Connect KeyStep** and allow MIDI access when the browser asks.
-2. **Read all** copies all 64 patterns into a new project (about 1.5 minutes). **Read pattern**
-   replaces only the slot you are on.
-3. Edit, then **Send pattern**. It writes the slot you are on to the same slot on the device, reads
-   it back and compares it.
+2. Pick a bank and slot, then **Read pattern** to load that slot from the device (about 3 seconds).
+   Or **Read all** to copy all 64 patterns into a new project (about 1.5 minutes).
+3. Edit.
+4. **Send pattern** writes the slot you are on to the same slot on the device. **Send all** does the
+   same for every slot that holds data here and skips the empty ones, so a project with three
+   patterns touches three slots on the device.
 
-A read can be cancelled at any point and the device is not affected. Cancelling **Read all** keeps
-the patterns that had arrived whole and opens them as a project; the pattern in progress is dropped
-and the slots not yet read are empty. Cancelling **Read pattern** changes nothing. A send cannot be cancelled once it starts, because a half-written
-pattern would be worse than either the old or the new one; it takes about three seconds.
+Every send is read back and compared before it is reported as done.
 
-Save a copy of what Read all returns before sending anything: that file is your backup, and MIDI
-Control Center can restore it.
+| Action | Cancelling |
+|--------|------------|
+| Read all | Keeps the patterns that arrived whole and opens them as a project; the one in progress is dropped |
+| Read pattern | Changes nothing |
+| Send pattern | Not possible once started: a half-written pattern would be worse than the old or the new one |
+| Send all | Finishes the pattern in progress, then stops; the remaining slots are unchanged on the device |
+
+Reading never changes the device. Before sending anything, do one **Read all** and save a copy: that
+file is your backup, and MIDI Control Center can restore it.
 
 ### Running it locally
 
@@ -130,6 +138,7 @@ Tested with one KeyStep mk2 on firmware 1.0.2 and MIDI Control Center on macOS.
 | Reading from the device | All 64 patterns read over MIDI equal MCC's export |
 | Writing to the device | All 16 factory patterns, a pattern with 8 notes on every step and every setting at its maximum, one with every setting at its minimum, and one with awkward byte values were each written to a spare slot and read back: notes, all 17 settings and checksum matched every time. Other slots were unchanged |
 | Cancelling a read | Cancelled at several points, including the last block of a pattern; the patterns kept and every read afterwards were byte-identical |
+| Send all | Three slots sent from a project with 61 empty ones: all three matched on read-back and a skipped slot was untouched. Cancelled mid-way: the pattern in progress completed and the rest were not written |
 
 Not verified: other firmware versions (1.0.4 exists), importing an edited file through MCC, how a
 sent pattern sounds (the checks compare data, not audio), and what the device does if a write is
