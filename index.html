@@ -1522,20 +1522,29 @@ async function readAllFromDevice() {
     stop();
     const blobs = new Map();
     beginXfer('Reading from KeyStep mk2', 64, { blobs });
-    for (let b = 1; b <= 4; b++) {
-      for (let n = 1; n <= 16; n++) {
-        Object.assign(xfer, { part: blobs.size, frac: 0, bank: b, number: n, partial: null, steps: Array.from({ length: 64 }, () => []), arrived: 0, drawn: -1, fitted: false });
-        xfer.big = `Pattern ${blobs.size + 1} <span>of 64</span>`;
-        $('status').textContent = `Reading bank ${b}, pattern ${n} from the KeyStep…`;
-        renderSlots();
-        blobs.set(KS2.patternKey(b, n), (await device.readPattern(b, n, onBlocks)).slice());
+    try {
+      for (let b = 1; b <= 4; b++) {
+        for (let n = 1; n <= 16; n++) {
+          Object.assign(xfer, { part: blobs.size, frac: 0, bank: b, number: n, partial: null, steps: Array.from({ length: 64 }, () => []), arrived: 0, drawn: -1, fitted: false });
+          xfer.big = `Pattern ${blobs.size + 1} <span>of 64</span>`;
+          $('status').textContent = `Reading bank ${b}, pattern ${n} from the KeyStep…`;
+          renderSlots();
+          blobs.set(KS2.patternKey(b, n), (await device.readPattern(b, n, onBlocks)).slice());
+        }
       }
+    } catch (e) {
+      // Cancelled: keep every pattern that arrived whole; the one in progress is dropped.
+      if (!(e instanceof Cancelled) || !blobs.size) throw e;
     }
+    const partial = blobs.size < 64;
     endXfer();
-    file = KS2.createProject(blobs); fileName = 'KeyStep mk2 device.keystep2'; dirty = false;
-    undoStack = []; redoStack = []; clipboard = null;
+    file = KS2.createProject(blobs);
+    fileName = partial ? `KeyStep mk2 device, first ${blobs.size} patterns.keystep2` : 'KeyStep mk2 device.keystep2';
+    dirty = false; undoStack = []; redoStack = []; clipboard = null;
     selectPattern(1, 1);
-    say('Read 64 patterns from the KeyStep.');
+    say(partial
+      ? `Stopped. Kept the ${blobs.size} pattern${blobs.size === 1 ? '' : 's'} already read; the other slots are empty here. The KeyStep is unchanged.`
+      : 'Read 64 patterns from the KeyStep.', partial);
   });
 }
 
