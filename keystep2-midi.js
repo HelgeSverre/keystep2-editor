@@ -106,6 +106,8 @@
 
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+  class NoAnswer extends Error {}
+
   class Device {
     constructor(transport) {
       this.transport = transport;
@@ -137,7 +139,7 @@
         const seq = this.send(op, items);
         const timer = setTimeout(() => {
           this.waiting.delete(seq);
-          reject(new Error('The KeyStep did not answer. Check the connection and that no other app is transferring.'));
+          reject(new NoAnswer('The KeyStep did not answer. Check the connection and that no other app or browser tab is using it.'));
         }, timeoutMs);
         this.waiting.set(seq, { resolve, timer });
       });
@@ -176,8 +178,12 @@
       // Straight after a complete read of another pattern the reader is fresh and plain block reads
       // start this pattern from its beginning. No select: sent just before reading, its delayed
       // effect on the device made the reader skip every other block.
-      let blob = last !== undefined && last !== index ? await this.readBlocks(index, progress) : null;
-      for (let attempt = 0; !good(blob) && attempt < 2; attempt++) blob = await this.readCarefully(index, progress);
+      // A missing answer is retried through the careful route too; only the last one is reported.
+      const attempt = async (read, final) => {
+        try { return await read(); } catch (e) { if (!(e instanceof NoAnswer) || final) throw e; await sleep(300); return null; }
+      };
+      let blob = last !== undefined && last !== index ? await attempt(() => this.readBlocks(index, progress), false) : null;
+      for (let n = 0; !good(blob) && n < 2; n++) blob = await attempt(() => this.readCarefully(index, progress), n === 1);
       if (!blob) throw new Error('The device sent an incomplete pattern.');
       if (!good(blob)) throw new Error('The pattern arrived damaged twice. Nothing was changed.');
       this.lastRead = index;
@@ -260,5 +266,5 @@
     return transport;
   }
 
-  return { OP, PARAM_ORDER, BLOCK, BLOCKS, pack7, unpack7, cbor, decodeCbor, encodeRequest, decodeMessage, patternIndex, normalise, Device, sysexAssembler, webMidiTransport };
+  return { OP, PARAM_ORDER, BLOCK, BLOCKS, NoAnswer, pack7, unpack7, cbor, decodeCbor, encodeRequest, decodeMessage, patternIndex, normalise, Device, sysexAssembler, webMidiTransport };
 });

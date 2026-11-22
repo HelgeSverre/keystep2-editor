@@ -156,6 +156,11 @@
   .toolbar .grp button:first-child { border-radius: var(--radius) 0 0 var(--radius); margin-left: 0; }
   .toolbar .grp button:last-child { border-radius: 0 var(--radius) var(--radius) 0; }
   .toolbar .grp button:only-child { border-radius: var(--radius); }
+  .toolbar .grp .lab {
+    font: 600 13px var(--font-label); letter-spacing: var(--label-track); color: var(--label); height: 26px; line-height: 24px; padding: 0 9px;
+    border: 1px solid var(--btn-edge); border-radius: var(--radius) 0 0 var(--radius); background: var(--panel);
+  }
+  .toolbar .grp .lab + button { border-radius: 0; margin-left: -1px; }
   .toolbar .grp button:hover:not(:disabled), .toolbar .grp button[aria-pressed="true"] { position: relative; }
   .toolbar .wordmark { font-family: var(--font-label); font-size: 17px; font-weight: 500; letter-spacing: 0.02em; white-space: nowrap; color: var(--muted); }
   .toolbar .wordmark b { font-weight: 600; color: var(--ink); }
@@ -205,21 +210,26 @@
   .banks button:last-child { border-radius: 0 var(--radius) var(--radius) 0; }
   .banks button[aria-pressed="true"] { position: relative; }
   #slots { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-auto-rows: minmax(26px, 1fr); border-top: 1px solid var(--line); }
+  /* Slot row: the number in a gutter like a track header, the clip in a recessed well, the length at the right. */
   .slot {
-    display: grid; grid-template-columns: 22px minmax(0, 1fr) 22px; gap: 6px; align-items: center;
-    height: auto; min-height: 0; padding: 2px 10px; border: 0; border-radius: 0; background: transparent; text-align: left;
-    border-bottom: 1px solid var(--line);
+    display: grid; grid-template-columns: 30px minmax(0, 1fr) 30px; align-items: stretch;
+    height: auto; min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; text-align: left;
+    border-bottom: 1px solid var(--line); font-family: var(--font); font-size: 12.5px; letter-spacing: 0;
   }
-  .slot:hover:not([aria-pressed="true"]) { background: var(--surface); }
-  .slot svg { width: 100%; height: 100%; max-height: 30px; min-height: 14px; display: block; }
+  .slot .num { display: grid; place-items: center; font-weight: 600; background: var(--sunken); border-right: 1px solid var(--line); }
+  .slot .clip { min-height: 0; padding: 4px 0 4px 8px; display: grid; }
+  .slot .well { min-height: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 3px; padding: 2px 4px; display: grid; align-items: center; }
+  .slot svg { width: 100%; height: 100%; max-height: 28px; min-height: 8px; display: block; }
   .slot svg rect { fill: var(--note); }
-  .slot { font-family: var(--font); font-size: 12.5px; letter-spacing: 0; }
-  .slot .num { font-weight: 600; text-align: right; }
-  .slot .len { color: var(--label); font-size: 11px; text-align: right; }
-  .slot[aria-pressed="true"] { background: var(--select); color: var(--on-select); }
+  .slot .len { align-self: center; color: var(--label); font-size: 11px; text-align: right; padding-right: 8px; }
+  .slot:hover:not([aria-pressed="true"]):not(:disabled) .well { border-color: var(--line-strong); }
   .slot.empty .num { color: var(--muted); font-weight: 400; }
+  .slot.empty .well { background: none; border-style: dashed; }
+  .slot[aria-pressed="true"] { background: var(--select); color: var(--on-select); }
+  .slot[aria-pressed="true"] .num { background: color-mix(in srgb, var(--select) 78%, #000); border-right-color: transparent; color: var(--on-select); font-weight: 600; }
+  .slot[aria-pressed="true"] .well { background: color-mix(in srgb, var(--on-select) 14%, transparent); border-color: color-mix(in srgb, var(--on-select) 40%, transparent); }
   .slot[aria-pressed="true"] svg rect { fill: var(--on-select); }
-  .slot[aria-pressed="true"] .len { color: var(--on-select); opacity: 0.8; }
+  .slot[aria-pressed="true"] .len { color: var(--on-select); opacity: 0.85; }
   .slot-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; padding: 8px 10px; border-top: 1px solid var(--line); }
   .slot-actions button { padding: 0; }
 
@@ -319,14 +329,22 @@
       <button id="fitBtn" disabled title="Show the whole pattern (F)">Fit</button>
     </div>
     <div class="side end">
-      <div class="grp" role="group" aria-label="Device">
+      <div class="grp">
         <button id="midiBtn" aria-pressed="false" title="Connect to a KeyStep mk2 over USB (Chrome or Edge)">Connect KeyStep</button>
-        <button id="readAllBtn" disabled title="Read all 64 patterns from the device into a new project">Read all</button>
-        <button id="readOneBtn" disabled title="Replace this slot with the same slot from the device">Read pattern</button>
-        <button id="sendBtn" disabled title="Write this pattern to the same slot on the device">Send pattern</button>
-        <button id="sendAllBtn" disabled title="Write every pattern that holds data here to the device. Empty slots are skipped.">Send all</button>
       </div>
-  <div class="skins" id="skins" role="group" aria-label="Skin">
+      <div class="grp" role="group" aria-label="Read from the KeyStep">
+        <span class="lab">Read</span>
+        <button id="readOneBtn" disabled title="Replace this slot with the same slot from the device">Pattern</button>
+        <button id="readBankBtn" disabled title="Replace the 16 slots of this bank with the device's">Bank</button>
+        <button id="readAllBtn" disabled title="Read all 64 patterns from the device into a new project">All</button>
+      </div>
+      <div class="grp" role="group" aria-label="Send to the KeyStep">
+        <span class="lab">Send</span>
+        <button id="sendBtn" disabled title="Write this pattern to the same slot on the device">Pattern</button>
+        <button id="sendBankBtn" disabled title="Write the patterns of this bank that hold data. Empty slots are skipped.">Bank</button>
+        <button id="sendAllBtn" disabled title="Write every pattern that holds data here. Empty slots are skipped.">All</button>
+      </div>
+      <div class="skins" id="skins" role="group" aria-label="Skin">
       <button data-skin="light" aria-pressed="false" aria-label="Light skin" title="Light">
         <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3"/><path d="M8 1.2v1.6M8 13.2v1.6M1.2 8h1.6M13.2 8h1.6M3.2 3.2l1.1 1.1M11.7 11.7l1.1 1.1M3.2 12.8l1.1-1.1M11.7 4.3l1.1-1.1"/></svg>
       </button>
@@ -401,7 +419,7 @@ let file = null, fileName = '', dirty = false;
 let bank = 1, number = 1, P = null;
 let steps = [];                 // 64 arrays of notes { n, v, l, x, s }; s = step index, kept by this file only
 let selection = new Set();      // selected notes
-let undoStack = [], redoStack = [], clipboard = null;
+let undoStack = [], redoStack = [], clipboard = null, undoGroups = 0;
 let lastVel = 100, lastLen = 2;
 let soundOn = true;
 let pristine = false;            // the untouched empty project the editor starts with
@@ -518,21 +536,28 @@ function selectPattern(b, n, keepView) {
   renderAll();
 }
 
-function snapshot() {
+/** `group` ties several snapshots into one undo step (a whole bank read from the device). */
+function snapshot(p = P, group = 0) {
   pristine = false;
-  undoStack.push({ bank, number, blob: P.blob.slice(), params: { ...P.params }, bias: P.bias });
+  undoStack.push({ bank: p.bank, number: p.number, blob: p.blob.slice(), params: { ...p.params }, bias: p.bias, group });
   if (undoStack.length > 300) undoStack.shift();
   redoStack = []; dirty = true;
 }
 
 function restore(from, to) {
-  const s = from.pop();
+  let s = from.pop();
   if (!s) return;
-  const p = getPattern(s.bank, s.number);
-  to.push({ bank: s.bank, number: s.number, blob: p.blob.slice(), params: { ...p.params }, bias: p.bias });
-  p.blob = s.blob; p.params = s.params; p.bias = s.bias;
+  for (;;) {
+    const p = getPattern(s.bank, s.number);
+    to.push({ bank: s.bank, number: s.number, blob: p.blob.slice(), params: { ...p.params }, bias: p.bias, group: s.group });
+    p.blob = s.blob; p.params = s.params; p.bias = s.bias;
+    const next = from[from.length - 1];
+    if (!s.group || !next || next.group !== s.group) break;
+    s = from.pop();
+  }
   dirty = true;
-  selectPattern(s.bank, s.number, s.bank === bank && s.number === number);
+  if (s.group) selectPattern(s.bank, number);
+  else selectPattern(s.bank, s.number, s.bank === bank && s.number === number);
 }
 
 /** Runs an edit as one undo step; the snapshot is dropped again if the edit changed nothing. */
@@ -729,7 +754,7 @@ function renderSlots() {
 function renderSlotList(reading, bank, number) {
   const source = (n) => {
     if (!reading) return getPattern(bank, n);
-    const blob = (n === xfer.number && xfer.partial) || xfer.blobs.get(KS2.patternKey(bank, n)) || NO_BLOB;
+    const blob = (n === xfer.number && xfer.partial) || xfer.blobs.get(KS2.patternKey(bank, n)) || (xfer.keep ? getPattern(bank, n).blob : NO_BLOB);
     return { blob, params: KS2.paramsFromBlob(blob) };
   };
   $('banks').innerHTML = [1, 2, 3, 4].map((b) =>
@@ -740,7 +765,7 @@ function renderSlotList(reading, bank, number) {
     if (!p) continue;
     const blank = isBlank(p) || !KS2.readSteps(p.blob).some((notes) => notes.length);
     html += `<button class="slot${blank ? ' empty' : ''}" data-number="${n}" aria-pressed="${n === number}"
-      aria-label="Pattern ${n}${blank ? ', empty' : ''}"><span class="num">${n}</span>${slotPreview(p)}
+      aria-label="Pattern ${n}${blank ? ', empty' : ''}"><span class="num">${n}</span><span class="clip"><span class="well">${slotPreview(p)}</span></span>
       <span class="len" title="Length in steps">${isBlank(p) ? '' : KS2.getParam(p, 'length')}</span></button>`;
   }
   $('slots').innerHTML = html;
@@ -1403,10 +1428,10 @@ class Cancelled extends Error {}
 /** `parts` is how many segments the progress track has: 64 for a full read, 1 or 2 otherwise. */
 function beginXfer(title, parts, options = {}) {
   xfer = { title, parts, part: 0, frac: 0, big: '', note: '', started: performance.now(), cancel: false, cancellable: options.cancellable !== false,
-    steps: null, arrived: 0, blobs: options.blobs || null, partial: null, bank, number, view: { ...view }, drawn: -1 };
+    steps: null, arrived: 0, blobs: options.blobs || null, keep: !!options.keep, partial: null, bank, number, view: { ...view }, drawn: -1 };
   $('xferTrack').innerHTML = '<i></i>'.repeat(parts);
-  $('xferTrack').classList.toggle('banked', !!options.blobs);
-  $('xferBanks').hidden = !options.blobs; $('xferNote').hidden = !!options.blobs;
+  $('xferTrack').classList.toggle('banked', !!options.banked);
+  $('xferBanks').hidden = !options.banked; $('xferNote').hidden = !!options.banked;
   $('xferCancel').hidden = !xfer.cancellable; $('xferCancel').disabled = false;
   $('xfer').hidden = false; $('drop').hidden = true;
   pristine = false;
@@ -1470,7 +1495,12 @@ function deviceButtons() {
   $('readAllBtn').disabled = !device || busy;
   $('readOneBtn').disabled = !device || busy || !file;
   $('sendBtn').disabled = !device || busy || !file || isBlank(P);
-  $('sendAllBtn').disabled = !device || busy || !file || ![...file.patterns.values()].some((p) => !isBlank(p));
+  const filled = file ? [...file.patterns.values()].filter((p) => !isBlank(p)) : [];
+  $('readBankBtn').disabled = !device || busy || !file;
+  $('sendAllBtn').disabled = !device || busy || !filled.length;
+  $('sendBankBtn').disabled = !device || busy || !filled.some((p) => p.bank === bank);
+  $('readBankBtn').title = `Replace the 16 slots of bank ${bank} with the device's`;
+  $('sendBankBtn').title = `Write the patterns of bank ${bank} that hold data. Empty slots are skipped.`;
 }
 
 function confirmAction(text, okLabel) {
@@ -1523,28 +1553,38 @@ async function transfer(label, fn) {
   }
 }
 
+/**
+ * Reads the given [bank, number] slots one after another, showing each arrive. Returns the patterns
+ * that arrived whole, keyed "bank_number". On cancel the one in progress is dropped; with nothing
+ * complete the cancel propagates.
+ */
+async function readSlots(slots, options) {
+  const blobs = new Map();
+  beginXfer('Reading from KeyStep mk2', slots.length, { blobs, ...options });
+  if (options.note) xfer.note = options.note;
+  try {
+    for (const [b, n] of slots) {
+      Object.assign(xfer, { part: blobs.size, frac: 0, bank: b, number: n, partial: null, steps: Array.from({ length: 64 }, () => []), arrived: 0, drawn: -1, fitted: false });
+      xfer.big = `Pattern ${blobs.size + 1} <span>of ${slots.length}</span>`;
+      $('status').textContent = `Reading bank ${b}, pattern ${n} from the KeyStep…`;
+      renderSlots();
+      blobs.set(KS2.patternKey(b, n), (await device.readPattern(b, n, onBlocks)).slice());
+    }
+  } catch (e) {
+    if (!(e instanceof Cancelled) || !blobs.size) throw e;
+  }
+  endXfer();
+  return blobs;
+}
+
 async function readAllFromDevice() {
   if (dirty && !(await confirmAction('Reading the device opens a new project and discards the unsaved edits here.', 'Read all'))) return;
   await transfer('Reading', async () => {
     stop();
-    const blobs = new Map();
-    beginXfer('Reading from KeyStep mk2', 64, { blobs });
-    try {
-      for (let b = 1; b <= 4; b++) {
-        for (let n = 1; n <= 16; n++) {
-          Object.assign(xfer, { part: blobs.size, frac: 0, bank: b, number: n, partial: null, steps: Array.from({ length: 64 }, () => []), arrived: 0, drawn: -1, fitted: false });
-          xfer.big = `Pattern ${blobs.size + 1} <span>of 64</span>`;
-          $('status').textContent = `Reading bank ${b}, pattern ${n} from the KeyStep…`;
-          renderSlots();
-          blobs.set(KS2.patternKey(b, n), (await device.readPattern(b, n, onBlocks)).slice());
-        }
-      }
-    } catch (e) {
-      // Cancelled: keep every pattern that arrived whole; the one in progress is dropped.
-      if (!(e instanceof Cancelled) || !blobs.size) throw e;
-    }
+    const slots = [];
+    for (let b = 1; b <= 4; b++) for (let n = 1; n <= 16; n++) slots.push([b, n]);
+    const blobs = await readSlots(slots, { banked: true });
     const partial = blobs.size < 64;
-    endXfer();
     file = KS2.createProject(blobs);
     fileName = partial ? `KeyStep mk2 device, first ${blobs.size} patterns.keystep2` : 'KeyStep mk2 device.keystep2';
     dirty = false; undoStack = []; redoStack = []; clipboard = null;
@@ -1552,6 +1592,26 @@ async function readAllFromDevice() {
     say(partial
       ? `Stopped. Kept the ${blobs.size} pattern${blobs.size === 1 ? '' : 's'} already read; the other slots are empty here. The KeyStep is unchanged.`
       : 'Read 64 patterns from the KeyStep.', partial);
+  });
+}
+
+async function readBankFromDevice() {
+  const b = bank;
+  await transfer('Reading', async () => {
+    stop();
+    const slots = Array.from({ length: 16 }, (_, i) => [b, i + 1]);
+    const blobs = await readSlots(slots, { keep: true, note: `Replaces bank ${b} in the editor. Undo brings the old patterns back.` });
+    const group = ++undoGroups;
+    for (const [key, blob] of blobs) {
+      const p = file.patterns.get(key);
+      snapshot(p, group);
+      p.blob = blob; p.params = KS2.paramsFromBlob(blob);
+      p.bias = isBlank(p) ? KS2.CHECKSUM_BIAS : KS2.storedChecksum(blob) ^ KS2.xorSum(blob);
+    }
+    selectPattern(b, number);
+    say(blobs.size < 16
+      ? `Stopped. Kept the ${blobs.size} pattern${blobs.size === 1 ? '' : 's'} of bank ${b} already read; the rest are as they were here.`
+      : `Read bank ${b} from the KeyStep.`, blobs.size < 16);
   });
 }
 
@@ -1580,17 +1640,28 @@ function wireParams(pattern, blob) {
   });
 }
 
-/** Writes one pattern, reads it back and compares notes and settings. `part` is its first of two track segments. */
+/**
+ * Writes one pattern, reads it back and compares notes and settings; a write that did not take is
+ * repeated once. `part` is its first of two track segments.
+ */
 async function writeAndCheck(pattern, part) {
   const blob = pattern.blob.slice(), where = `bank ${pattern.bank}, pattern ${pattern.number}`;
   const stopping = () => (xfer.cancel ? 'Stopping after this pattern. ' : '');
-  xfer.part = part; xfer.frac = 0; xfer.note = stopping() + 'Writing. Keep the KeyStep connected.';
-  await device.writePattern(pattern.bank, pattern.number, blob, wireParams(pattern, blob), (done, total) => { xfer.frac = done / total; draw(); });
-  xfer.part = part + 1; xfer.frac = 0; xfer.note = stopping() + 'Reading it back to compare.';
-  const back = await device.readPattern(pattern.bank, pattern.number, (done, total) => { xfer.frac = done / total; draw(); });
-  for (let i = KS2.STEPS_OFFSET; i < KS2.STEPS_END; i++) if (back[i] !== blob[i]) throw new Error(`the device holds different notes in ${where} than were sent`);
-  const want = KS2.paramsFromBlob(blob), got = KS2.paramsFromBlob(back);
-  for (const id of KS2MIDI.PARAM_ORDER) if (want[id] !== got[id]) throw new Error(`the device holds a different ${KS2.PARAM_BY_ID.get(id).label.toLowerCase()} in ${where} than was sent`);
+  const differs = (back) => {
+    for (let i = KS2.STEPS_OFFSET; i < KS2.STEPS_END; i++) if (back[i] !== blob[i]) return `the device holds different notes in ${where} than were sent`;
+    const want = KS2.paramsFromBlob(blob), got = KS2.paramsFromBlob(back);
+    for (const id of KS2MIDI.PARAM_ORDER) if (want[id] !== got[id]) return `the device holds a different ${KS2.PARAM_BY_ID.get(id).label.toLowerCase()} in ${where} than was sent`;
+    return '';
+  };
+  let problem = '';
+  for (let attempt = 0; attempt < 2; attempt++) {
+    xfer.part = part; xfer.frac = 0; xfer.note = stopping() + (attempt ? 'Writing again: the first try did not take. ' : 'Writing. ') + 'Keep the KeyStep connected.';
+    await device.writePattern(pattern.bank, pattern.number, blob, wireParams(pattern, blob), (done, total) => { xfer.frac = done / total; draw(); });
+    xfer.part = part + 1; xfer.frac = 0; xfer.note = stopping() + 'Reading it back to compare.';
+    problem = differs(await device.readPattern(pattern.bank, pattern.number, (done, total) => { xfer.frac = done / total; draw(); }));
+    if (!problem) return;
+  }
+  throw new Error(problem);
 }
 
 async function sendToDevice() {
@@ -1608,14 +1679,14 @@ async function sendToDevice() {
   });
 }
 
-async function sendAllToDevice() {
-  const list = [...file.patterns.values()].filter((p) => !isBlank(p)).sort((a, b) => a.bank - b.bank || a.number - b.number);
+/** Sends the given patterns one after another, each read back and compared. `scope` and `of` word the dialog. */
+async function sendPatterns(list, scope, emptyCount, emptyOf) {
   if (!list.length) return;
-  const skipped = 64 - list.length;
-  const text = `Send ${list.length} pattern${list.length === 1 ? '' : 's'} to the KeyStep? Each replaces the same slot on the device.`
-    + (skipped ? ` The ${skipped} empty slot${skipped === 1 ? '' : 's'} here ${skipped === 1 ? 'is' : 'are'} skipped and left as ${skipped === 1 ? 'it is' : 'they are'} on the device.` : '')
-    + ` This takes about ${list.length * 3.5 < 90 ? Math.round(list.length * 3.5) + ' seconds' : Math.round(list.length * 3.5 / 60) + ' minutes'}.`;
-  if (!(await confirmAction(text, 'Send all'))) return;
+  const seconds = list.length * 3.5;
+  const text = `Send ${list.length} pattern${list.length === 1 ? '' : 's'}${scope} to the KeyStep? Each replaces the same slot on the device.`
+    + (emptyCount ? ` The ${emptyCount} empty slot${emptyCount === 1 ? '' : 's'}${emptyOf} ${emptyCount === 1 ? 'is' : 'are'} skipped and left as ${emptyCount === 1 ? 'it is' : 'they are'} on the device.` : '')
+    + ` This takes about ${seconds < 90 ? Math.round(seconds) + ' seconds' : Math.round(seconds / 60) + ' minutes'}.`;
+  if (!(await confirmAction(text, 'Send'))) return;
   await transfer('Sending', async () => {
     stop();
     beginXfer('Sending to KeyStep mk2', list.length * 2);
@@ -1638,6 +1709,20 @@ async function sendAllToDevice() {
   });
 }
 
+const filledPatterns = (inBank) => [...file.patterns.values()]
+  .filter((p) => !isBlank(p) && (!inBank || p.bank === inBank))
+  .sort((a, b) => a.bank - b.bank || a.number - b.number);
+
+function sendAllToDevice() {
+  const list = filledPatterns();
+  return sendPatterns(list, '', 64 - list.length, ' here');
+}
+
+function sendBankToDevice() {
+  const list = filledPatterns(bank);
+  return sendPatterns(list, ` of bank ${bank}`, 16 - list.length, ` of bank ${bank}`);
+}
+
 $('xferCancel').onclick = () => {
   if (!xfer || !xfer.cancellable) return;
   xfer.cancel = true; $('xferCancel').disabled = true;
@@ -1648,6 +1733,8 @@ $('readAllBtn').onclick = readAllFromDevice;
 $('readOneBtn').onclick = readOneFromDevice;
 $('sendBtn').onclick = sendToDevice;
 $('sendAllBtn').onclick = sendAllToDevice;
+$('readBankBtn').onclick = readBankFromDevice;
+$('sendBankBtn').onclick = sendBankToDevice;
 
 // ---- skin ---------------------------------------------------------------------
 function setSkin(name) {

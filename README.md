@@ -46,21 +46,30 @@ Center first.
 The editor starts with an empty project of 64 slots, so no file is needed.
 
 1. Press **Connect KeyStep** and allow MIDI access when the browser asks.
-2. Pick a bank and slot, then **Read pattern** to load that slot from the device (about 3 seconds).
-   Or **Read all** to copy all 64 patterns into a new project (about 1.5 minutes).
+2. Pick a bank and slot, then use the **Read** group to load from the device.
 3. Edit.
-4. **Send pattern** writes the slot you are on to the same slot on the device. **Send all** does the
-   same for every slot that holds data here and skips the empty ones, so a project with three
-   patterns touches three slots on the device.
+4. Use the **Send** group to write back.
 
-Every send is read back and compared before it is reported as done.
+| Scope | Read | Send |
+|-------|------|------|
+| Pattern | Replaces the slot you are on. About 3 seconds | Writes the slot you are on. About 3 seconds |
+| Bank | Replaces the 16 slots of the bank shown, as one undo step. About 21 seconds | Writes the slots of that bank that hold data. About a minute for 16 |
+| All | Opens all 64 patterns as a new project. About 1.5 minutes | Writes every slot that holds data. About 4 minutes for 64 |
+
+Send skips empty slots and leaves them as they are on the device, so a project with three patterns
+touches three slots. Every pattern sent is read back and compared before it is reported as done; a
+write that did not take is repeated once.
 
 | Action | Cancelling |
 |--------|------------|
 | Read all | Keeps the patterns that arrived whole and opens them as a project; the one in progress is dropped |
+| Read bank | Keeps the patterns that arrived whole; the rest of the bank stays as it was in the editor |
 | Read pattern | Changes nothing |
 | Send pattern | Not possible once started: a half-written pattern would be worse than the old or the new one |
-| Send all | Finishes the pattern in progress, then stops; the remaining slots are unchanged on the device |
+| Send bank, Send all | Finishes the pattern in progress, then stops; the remaining slots are unchanged on the device |
+
+Use one browser tab at a time: the device has a single transfer state, and two tabs or apps talking
+to it at once will disturb each other.
 
 Reading never changes the device. Before sending anything, do one **Read all** and save a copy: that
 file is your backup, and MIDI Control Center can restore it.
@@ -138,7 +147,8 @@ Tested with one KeyStep mk2 on firmware 1.0.2 and MIDI Control Center on macOS.
 | Reading from the device | All 64 patterns read over MIDI equal MCC's export |
 | Writing to the device | All 16 factory patterns, a pattern with 8 notes on every step and every setting at its maximum, one with every setting at its minimum, and one with awkward byte values were each written to a spare slot and read back: notes, all 17 settings and checksum matched every time. Other slots were unchanged |
 | Cancelling a read | Cancelled at several points, including the last block of a pattern; the patterns kept and every read afterwards were byte-identical |
-| Send all | Three slots sent from a project with 61 empty ones: all three matched on read-back and a skipped slot was untouched. Cancelled mid-way: the pattern in progress completed and the rest were not written |
+| Send bank, Send all | A full bank of 16 and a project with 61 empty slots were sent: every pattern matched on read-back and skipped slots were untouched. Cancelled mid-way: the pattern in progress completed and the rest were not written |
+| Read bank | 16 patterns matched the device; cancelling kept the ones already read |
 
 Not verified: other firmware versions (1.0.4 exists), importing an edited file through MCC, how a
 sent pattern sounds (the checks compare data, not audio), and what the device does if a write is
